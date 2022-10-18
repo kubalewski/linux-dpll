@@ -671,8 +671,8 @@ static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
 	}
 
 	for (i = 0; i < count; i++) {
-		dpll_init_pin(&pins->pin, type, ops, pf, NULL, i);
-		dpll_pin_register(dpll, pins->pin);
+		dpll_init_pin(&pins[i].pin, type, ops, pf, pins[i].name, i);
+		ret = dpll_pin_register(dpll, pins[i].pin);
 		if (ret) {
 			ice_synce_release_pins(dpll, pins, i + 1);
 		}

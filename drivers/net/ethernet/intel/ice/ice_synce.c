@@ -672,8 +672,10 @@ static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
 
 	for (i = 0; i < count; i++) {
 		pins[i].pin = dpll_pin_alloc(ops, type, pins[i].name, pf);
-		if (!pins[i].pin)
+		if (!pins[i].pin) {
+			ice_synce_release_pins(dpll, pins, i);
 			return -ENOMEM;
+		}
 
 		ret = dpll_pin_register(dpll, pins[i].pin);
 		if (ret) {
@@ -806,7 +808,10 @@ static void ice_synce_periodic_work(struct kthread_work *work)
 	struct ice_synce *synce = container_of(work, struct ice_synce,
 					       work.work);
 	struct ice_pf *pf = container_of(synce, struct ice_pf, synce);
-	int ret;
+	int ret = 0;
+
+	if (!test_bit(ICE_FLAG_SYNCE, pf->flags))
+		return;
 
 	mutex_lock(&pf->synce.lock);
 	ret = ice_synce_update_dpll_state(pf, synce->dpll_state);
@@ -827,6 +832,7 @@ static void ice_synce_periodic_work(struct kthread_work *work)
 		}
 	}
 	mutex_unlock(&pf->synce.lock);
+
 	/* Run twice a second or reschedule if update failed */
 	kthread_queue_delayed_work(synce->kworker, &synce->work,
 				   ret ? msecs_to_jiffies(10) :
@@ -861,6 +867,34 @@ static int ice_synce_init_dpll_worker(struct ice_pf *pf)
 }
 
 /**
+ * __ice_synce_release - Disable the driver/HW support for SyncE and unregister
+ * the dpll.
+ * @pf: Board private structure
+ *
+ * This function handles the cleanup work required from the initialization by
+ * freeing resources and unregistering the dpll.
+ *
+ * Context: Called under pf->synce.lock
+ */
+static void __ice_synce_release(struct ice_pf *pf)
+{
+	struct ice_synce *se = &pf->synce;
+
+	ice_synce_release_info(pf);
+	if (se->dpll) {
+		dpll_device_unregister(se->dpll);
+		dpll_device_free(se->dpll);
+		dev_dbg(ice_pf_to_dev(pf), "SyncE dpll removed\n");
+	}
+	kthread_cancel_delayed_work_sync(&se->work);
+	if (se->kworker) {
+		kthread_destroy_worker(se->kworker);
+		se->kworker = NULL;
+		dev_dbg(ice_pf_to_dev(pf), "SyncE worker removed\n");
+	}
+}
+
+/**
  * ice_synce_init - Initialize SyncE support
  * @pf: Board private structure
  *
@@ -883,30 +917,35 @@ int ice_synce_init(struct ice_pf *pf)
 		goto unlock;
 	err = ice_synce_init_dpll_worker(pf);
 	if (err)
-		goto free_info;
+		goto release;
 	err = ice_synce_init_dpll(pf);
 	if (err)
-		goto free_info;
+		goto release;
 	err = ice_synce_register_pins(pf, pf->synce.dpll, pf->synce.inputs,
 				      pf->synce.num_inputs, true);
 	if (err)
-		goto free_info;
+		goto release;
 	err = ice_synce_register_pins(pf, pf->synce.dpll, pf->synce.outputs,
 				      pf->synce.num_outputs, false);
 	if (err) {
 		ice_synce_release_pins(pf->synce.dpll, pf->synce.inputs,
 				       pf->synce.num_inputs);
-		goto free_info;
+		goto release;
 	}
 
 	dev_dbg(ice_pf_to_dev(pf), "SyncE init successful\n");
+	set_bit(ICE_FLAG_SYNCE, pf->flags);
 	mutex_unlock(&pf->synce.lock);
 
 	return err;
-free_info:
-	ice_synce_release_info(pf);
+release:
+	dev_warn(ice_pf_to_dev(pf), "SyncE init failure\n");
+	__ice_synce_release(pf);
 unlock:
+	clear_bit(ICE_FLAG_SYNCE, pf->flags);
 	mutex_unlock(&pf->synce.lock);
+	mutex_destroy(&pf->synce.lock);
+
 	return err;
 }
 
@@ -916,25 +955,15 @@ unlock:
  * @pf: Board private structure
  *
  * This function handles the cleanup work required from the initialization by
- * clearing out the important information and unregistering the dpll.
+ * freeing resources and unregistering the dpll.
  */
 void ice_synce_release(struct ice_pf *pf)
 {
-	struct ice_synce *se = &pf->synce;
-
-	mutex_lock(&se->lock);
-	ice_synce_release_info(pf);
-	if (se->dpll) {
-		dpll_device_unregister(se->dpll);
-		dpll_device_free(se->dpll);
-		dev_dbg(ice_pf_to_dev(pf), "SyncE dpll removed\n");
+	if (test_bit(ICE_FLAG_SYNCE, pf->flags)) {
+		mutex_lock(&pf->synce.lock);
+		__ice_synce_release(pf);
+		mutex_unlock(&pf->synce.lock);
+		mutex_destroy(&pf->synce.lock);
+		clear_bit(ICE_FLAG_SYNCE, pf->flags);
 	}
-	kthread_cancel_delayed_work_sync(&se->work);
-	if (se->kworker) {
-		kthread_destroy_worker(se->kworker);
-		se->kworker = NULL;
-		dev_dbg(ice_pf_to_dev(pf), "SyncE worker removed\n");
-	}
-	mutex_unlock(&se->lock);
-	mutex_destroy(&se->lock);
 }

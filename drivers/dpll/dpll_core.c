@@ -184,7 +184,7 @@ struct dpll_pin *dpll_pin_alloc(struct dpll_pin_ops *ops,
 				enum dpll_pin_type type,
 				const char *name, void *priv)
 {
-	struct dpll_pin *pin = kmalloc(sizeof(struct dpll_pin), GFP_KERNEL);
+	struct dpll_pin *pin = kzalloc(sizeof(struct dpll_pin), GFP_KERNEL);
 
 	if (!pin)
 		return pin;
@@ -255,7 +255,6 @@ int dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin)
 	if (!ret) {
 		refcount_inc(&pin->ref_count);
 		change_pin_count(dpll, pin, true);
-		xa_set_mark(&dpll->pins, dpll->id, DPLL_REGISTERED);
 	}
 
 	mutex_unlock(&dpll->lock);
@@ -293,9 +292,10 @@ int dpll_pin_deregister(struct dpll_device *dpll, struct dpll_pin *pin)
 
 	mutex_lock(&dpll->lock);
 	ret = pin_deregister(&dpll->pins, pin);
-	if (!ret)
+	if (!ret) {
 		change_pin_count(dpll, pin, false);
-
+		pin->ref_count--;
+	}
 	mutex_unlock(&dpll->lock);
 
 	if (!ret) {

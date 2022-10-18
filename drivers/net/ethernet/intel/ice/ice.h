@@ -489,6 +489,7 @@ enum ice_pf_flags {
 	ICE_FLAG_PLUG_AUX_DEV,
 	ICE_FLAG_MTU_CHANGED,
 	ICE_FLAG_GNSS,			/* GNSS successfully initialized */
+	ICE_FLAG_SYNCE,			/* SyncE is enabled by software */
 	ICE_PF_FLAGS_NBITS		/* must be last */
 };
 

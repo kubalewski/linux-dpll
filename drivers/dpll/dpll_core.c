@@ -180,25 +180,29 @@ void dpll_device_unregister(struct dpll_device *dpll)
 }
 EXPORT_SYMBOL_GPL(dpll_device_unregister);
 
-void dpll_init_pin(struct dpll_pin **pin, enum dpll_pin_type type,
-		   struct dpll_pin_ops *ops, void *priv, const char *name,
-		   int id)
+struct dpll_pin *dpll_pin_alloc(struct dpll_pin_ops *ops,
+				enum dpll_pin_type type,
+				const char *name, void *priv)
 {
-	*pin = kmalloc(sizeof(**pin), GFP_KERNEL);
+	struct dpll_pin *pin = kmalloc(sizeof(struct dpll_pin), GFP_KERNEL);
 
-	(*pin)->ops = ops;
-	(*pin)->type = type;
-	(*pin)->priv = priv;
-	(*pin)->id = id;
+	if (!pin)
+		return pin;
+
+	pin->ops = ops;
+	pin->type = type;
+	pin->priv = priv;
 	refcount_set(&((*pin)->ref_count), 0);
 	if (name)
-		snprintf((*pin)->name, PIN_NAME_LENGTH, "%s", name);
+		snprintf(pin->name, PIN_NAME_LENGTH, "%s", name);
 	else
-		snprintf((*pin)->name, PIN_NAME_LENGTH, "%s%d",
-			IS_TYPE_SOURCE((*pin)->type) ? "source" : "output",
-			(*pin)->id);
+		snprintf(pin->name, PIN_NAME_LENGTH, "%s%d",
+			IS_TYPE_SOURCE(pin->type) ? "source" : "output",
+			pin->id);
+
+	return pin;
 }
-EXPORT_SYMBOL_GPL(dpll_init_pin);
+EXPORT_SYMBOL_GPL(dpll_pin_alloc);
 
 static int pin_register(struct xarray *pins, struct dpll_pin *pin)
 {
@@ -208,13 +212,20 @@ static int pin_register(struct xarray *pins, struct dpll_pin *pin)
 	u32 id;
 
 	xa_for_each(pins, index, pos) {
-		if (pos == pin)
+		if (pos == pin ||
+		    !strncmp(pos->name, pin->name, PIN_NAME_LENGTH))
 			return -EEXIST;
 	}
 
 	ret = xa_alloc(pins, &id, pin, xa_limit_16b, GFP_KERNEL);
-	if (!ret)
+	if (!ret) {
+		/* Assign pin id only when being registered with first dpll,
+		 * pin id shall be equal on all dplls sharing the pin.
+		 */
+		if (!pin->ref_count)
+			pin->id = id;
 		xa_set_mark(pins, id, PIN_TYPE_TO_MARK(pin->type));
+	}
 
 	return ret;
 }

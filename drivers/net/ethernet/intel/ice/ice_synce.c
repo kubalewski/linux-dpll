@@ -618,7 +618,7 @@ static int ice_synce_init_pins(struct ice_hw *hw, bool input, int num_pins,
 }
 
 /**
- * ice_synce_register_pins
+ * ice_synce_release_pins
  * @dpll: dpll pointer
  * @pins: pointer to pins array
  * @count: no of pins
@@ -671,10 +671,14 @@ static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
 	}
 
 	for (i = 0; i < count; i++) {
-		dpll_init_pin(&pins[i].pin, type, ops, pf, pins[i].name, i);
+		pins[i].pin = dpll_pin_alloc(ops, type, pins[i].name, pf);
+		if (!pins[i].pin)
+			return -ENOMEM;
+
 		ret = dpll_pin_register(dpll, pins[i].pin);
 		if (ret) {
 			ice_synce_release_pins(dpll, pins, i + 1);
+			return -ENOSPC;
 		}
 	}
 

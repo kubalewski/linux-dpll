@@ -55,8 +55,7 @@ int pin_id(struct dpll_pin *pin);
 /*
  * dpll_pin_alloc - allocate memory for a new dpll_pin object
  * @ops: pointer to pin operations structure
- * @id: id given by the owner, used to find pin by id
- * @dpll_pin_type: type of a pin being allocated
+ * @type: type of a pin being allocated
  * @name: human readable pin name of allocated pin
  * @priv: private data of a registerer
  *
@@ -64,11 +63,10 @@ int pin_id(struct dpll_pin *pin);
  * callbacks and private data pointer.
  *
  * Returns:
- * * pointer to initialized pin - success,
- * * ERR_PTR(-ENOMEM) - memory failure,
- * * ERR_PTR(-EINVAL) - given pin type is invalid.
+ * * pointer to initialized pin - success
+ * * NULL - memory allocation fail
  **/
-struct dpll_pin *dpll_pin_alloc(struct dpll_pin_ops *ops, int id,
+struct dpll_pin *dpll_pin_alloc(struct dpll_pin_ops *ops,
 				enum dpll_pin_type type,
 				const char *name, void *priv);
 
@@ -185,19 +183,6 @@ struct dpll_pin *dpll_pin_get_by_name(struct dpll_device *dpll, const char *name
  * Return: pointer if pin was found, NULL otherwise.
  **/
 struct dpll_pin *dpll_pin_get_by_id(struct dpll_device *dpll, int id);
-
-/*
- * dpll_init_pins - initialize data of dpll pins
- * @pin: pointer to pointer to dpll object to initialize
- * @type: the type of dpll pin
- * @ops: pointer to dpll ops
- * @priv: private data of an dpll pin object
- * @name: human readable pin name
- * @id: dpll pin id
- **/
-void dpll_init_pin(struct dpll_pin **pin, enum dpll_pin_type type,
-		   struct dpll_pin_ops *ops, void *priv, const char *name,
-		   int id);
 
 int dpll_notify_status_locked(int dpll_id);
 int dpll_notify_status_unlocked(int dpll_id);

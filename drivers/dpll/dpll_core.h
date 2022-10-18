@@ -74,7 +74,4 @@ int for_each_dpll_device(int id, int (*cb)(struct dpll_device *, void *),
 struct dpll_device *dpll_device_get_by_id(int id);
 struct dpll_device *dpll_device_get_by_name(const char *name);
 void dpll_device_unregister(struct dpll_device *dpll);
-void dpll_init_pin(struct dpll_pin **pin, enum dpll_pin_type type,
-		   struct dpll_pin_ops *ops, void *priv,
-		   const char *name, int id);
 #endif

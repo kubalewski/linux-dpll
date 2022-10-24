@@ -42,7 +42,7 @@ struct ice_synce_pin {
  * @lock: locks access to configuration of a dpll
  * @work: periodic work
  */
-struct ice_synce {
+struct ice_dpll {
 	struct dpll_device *dpll;
 	int dpll_idx;
 	u8 current_source;

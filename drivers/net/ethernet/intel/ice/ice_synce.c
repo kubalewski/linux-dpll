@@ -431,25 +431,25 @@ static int ice_synce_set_source_prio(struct dpll_device *dpll,
 	return ret;
 }
 
-static struct dpll_pin_ops ice_synce_source_ops = {
-	.get_type = ice_synce_get_source_type,
-	.set_type = ice_synce_set_source_type,
-	.is_type_supported = ice_synce_get_source_supported,
+static struct dpll_pin_ops ice_dpll_source_ops = {
+	.get_type = ice_dpll_get_source_type,
+	.set_type = ice_dpll_set_source_type,
+	.is_type_supported = ice_dpll_get_source_supported,
 };
 
-static struct dpll_pin_ops ice_synce_output_ops = {
-	.get_type = ice_synce_get_output_type,
-	.set_type = ice_synce_set_output_type,
-	.is_type_supported = ice_synce_get_output_supported,
+static struct dpll_pin_ops ice_dpll_output_ops = {
+	.get_type = ice_dpll_get_output_type,
+	.set_type = ice_dpll_set_output_type,
+	.is_type_supported = ice_dpll_get_output_supported,
 };
 
-static struct dpll_device_ops ice_synce_dpll_ops = {
-	.get_status = ice_synce_get_status,
-	.get_lock_status = ice_synce_get_lock_status,
-	.get_source_select_mode = ice_synce_get_source_select_mode,
-	.get_source_select_mode_supported = ice_synce_get_src_select_supported,
-	.get_prio = ice_synce_get_source_prio,
-	.set_prio = ice_synce_set_source_prio,
+static struct dpll_device_ops ice_dpll_ops = {
+	.get_status = ice_dpll_get_status,
+	.get_lock_status = ice_dpll_get_lock_status,
+	.get_source_select_mode = ice_dpll_get_source_select_mode,
+	.get_source_select_mode_supported = ice_dpll_get_src_select_supported,
+	.get_prio = ice_dpll_get_source_prio,
+	.set_prio = ice_dpll_set_source_prio,
 };
 
 /**
@@ -653,9 +653,9 @@ static void ice_synce_release_pins(struct dpll_device *dpll,
  * * 0 - success
  * * negative - error
  */
-static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
-				   struct ice_synce_pin *pins, int count,
-				   bool inputs)
+static int ice_dpll_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
+				  struct ice_synce_pin *pins, int count,
+				  bool inputs)
 {
 	struct dpll_pin_ops *ops;
 	enum dpll_pin_type type;
@@ -677,18 +677,19 @@ static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
 			return -ENOMEM;
 		}
 
-		ret = dpll_pin_register(dpll, pins[i].pin);
-		if (ret) {
+		if (ret)
 			ice_synce_release_pins(dpll, pins, i + 1);
 			return -ENOSPC;
 		}
+
+		dev_err(ice_pf_to_dev(pf), "abc\n");
 	}
 
 	return 0;
 }
 
 /**
- * ice_synce_init_info
+ * ice_dpll_init_info
  * @pf: Board private structure
  *
  * Acquire (from HW) and set basic dpll information (on pf->synce struct).
@@ -697,41 +698,32 @@ static int ice_synce_register_pins(struct ice_pf *pf, struct dpll_device *dpll,
  * * 0 - success
  * * negative - AQ error
  */
-static int ice_synce_init_info(struct ice_pf *pf)
+static int ice_dpll_init_info(struct ice_pf *pf, int dpll_idx)
 {
 	struct ice_aqc_get_cgu_abilities abilities;
-	struct ice_synce *se = &pf->synce;
+	struct ice_dpll *se = &pf->dpll;
 	struct ice_hw *hw = &pf->hw;
 	int ret, alloc_size;
 
-	ret = ice_aq_get_cgu_abilities(hw, &abilities);
-	if (ret) {
-		dev_err(ice_pf_to_dev(pf),
-			"err:%d %s failed to read cgu abilities\n",
-			ret, ice_aq_str(hw->adminq.sq_last_status));
-		return ret;
-	}
-	se->dpll_idx = abilities.synce_dpll_idx;
-	se->num_inputs = abilities.num_inputs;
 	alloc_size = sizeof(*se->inputs) * se->num_inputs;
 	se->inputs = kmalloc(alloc_size, GFP_KERNEL);
 	if (!se->inputs)
 		return -ENOMEM;
-	ret = ice_synce_init_pins(hw, true, se->num_inputs, se->inputs,
-				  se->dpll_idx);
+	ret = ice_dpll_init_pins(hw, true, se->num_inputs, se->inputs,
+				 dpll_idx);
 	if (ret)
 		goto release_info;
-	se->num_outputs = abilities.num_outputs;
+
 	alloc_size = sizeof(*se->outputs) * se->num_outputs;
 	se->outputs = kmalloc(alloc_size, GFP_KERNEL);
 	if (!se->outputs)
 		goto release_info;
-	ret = ice_synce_init_pins(hw, false, se->num_outputs, se->outputs,
-				  se->dpll_idx);
+	ret = ice_dpll_init_pins(hw, false, se->num_outputs, se->outputs,
+				 dpll_idx);
 	if (ret)
 		goto release_info;
-	dev_info(ice_pf_to_dev(pf), "SyncE dpll init: inputs:%u, outputs:%u\n",
-		 abilities.num_inputs, abilities.num_outputs);
+	dev_info(ice_pf_to_dev(pf), "Dpll%d init: inputs:%u, outputs:%u\n",
+		 dpll_idx, se->num_inputs, se->num_outputs);
 
 	return 0;
 
@@ -740,6 +732,37 @@ release_info:
 	return ret;
 }
 
+static int ice_dpll_init(struct ice_pf *pf)
+{
+	struct ice_aqc_get_cgu_abilities abilities;
+	struct ice_dpll *se = &pf->dpll_synce;
+	struct ice_dpll *ptp = &pf->dpll_ptp;
+	int ret, alloc_size;
+
+	ret = ice_aq_get_cgu_abilities(hw, &abilities);
+	if (ret) {
+		dev_err(ice_pf_to_dev(pf),
+			"err: %d %s failed to read cgu abilities\n",
+			ret, ice_aq_str(hw->adminq.sq_last_status));
+		return ret;
+	}
+
+	se->dpll_idx = abilities.synce_dpll_idx;
+	se->num_inputs = abilities.num_inputs;
+	se->num_outputs = abilities.num_outputs;
+
+	ptp->dpll = abilities.ptp_dpll_idx;
+	ptp->num_inputs = abilities.num_inputs;
+	se->num_outputs = abilities.num_outputs;
+
+	ret = ice_dpll_init_info(pf, se->dpll_idx);
+	if (ret) {
+		dev_err(ice_pf_to_dev(pf),
+			"err: %d failed to initialize pins of dpll%d\n",
+			ret, se->dpll_idx);
+	}
+	return 0;
+}
 /**
  * ice_synce_init_dpll
  * @pf: Board private structure
@@ -750,21 +773,35 @@ release_info:
  * * 0 - success
  * * -ENOMEM - allocation fails
  */
-static int ice_synce_init_dpll(struct ice_pf *pf)
+static int ice_dpll_alloc_dplls(struct ice_pf *pf)
 {
 	struct device *dev = ice_pf_to_dev(pf);
-	struct ice_synce *se = &pf->synce;
+	struct ice_dpll *se = &pf->dpll_synce;
+	struct ice_dpll *ptp = &pf->dpll_ptp;
+
 	char name[DPLL_NAME_LENGTH];
 
 	snprintf(name, DPLL_NAME_LENGTH, "%s-SyncE-%s",
 		 dev_driver_string(dev), dev_name(dev));
 
-	se->dpll = dpll_device_alloc(&ice_synce_dpll_ops, name, pf);
+	se->dpll = dpll_device_alloc(&ice_dpll_ops, name, pf);
 	if (!se->dpll) {
 		dev_err(ice_pf_to_dev(pf), "dpll_device_alloc failed\n");
 		return -ENOMEM;
 	}
+
 	dpll_device_register(se->dpll);
+
+	snprintf(name, DPLL_NAME_LENGTH, "%s-PTP-%s",
+		 dev_driver_string(dev), dev(name));
+
+	ptp->dpll = dpll_device_alloc(&ice_dpll_ops, name, pf);
+	if (!ptp->dpll) {
+		dev_err(ice_pf_to_dev(pf), "dpll_device_alloc failed \n");
+		return -ENOMEM;
+	}
+
+	dpll_device_register(ptp->dpll);
 
 	return 0;
 }
@@ -779,8 +816,8 @@ static int ice_synce_init_dpll(struct ice_pf *pf)
  * * 0 - success
  * * negative - AQ failure
  */
-static int ice_synce_update_dpll_state(struct ice_pf *pf,
-				       enum ice_cgu_state last_state)
+static int ice_dpll_update_state(struct ice_pf *pf,
+				 enum ice_cgu_state last_state)
 {
 	struct ice_synce *se = &pf->synce;
 	int ret;
@@ -848,7 +885,7 @@ static void ice_synce_periodic_work(struct kthread_work *work)
  * * 0 - success
  * * negative - create worker failure
  */
-static int ice_synce_init_dpll_worker(struct ice_pf *pf)
+static int ice_dpll_init_synce_worker(struct ice_pf *pf)
 {
 	struct ice_synce *se = &pf->synce;
 	struct kthread_worker *kworker;
@@ -905,38 +942,36 @@ static void __ice_synce_release(struct ice_pf *pf)
  * * 0 - success
  * * negative - init failure
  */
-int ice_synce_init(struct ice_pf *pf)
+int ice_dpll_init(struct ice_pf *pf)
 {
 	int err;
 
-	mutex_init(&pf->synce.lock);
-	mutex_lock(&pf->synce.lock);
+	mutex_init(&pf->dpll_synce.lock);
+	mutex_lock(&pf->dpll_synce.lock);
 
-	err = ice_synce_init_info(pf);
+	err = ice_dpll_init_info(pf);
 	if (err)
 		goto unlock;
-	err = ice_synce_init_dpll_worker(pf);
+	err = ice_dpll_init_dpll_worker(pf);
 	if (err)
 		goto release;
-	err = ice_synce_init_dpll(pf);
+	err = ice_dpll_init_dpll(pf);
 	if (err)
 		goto release;
-	err = ice_synce_register_pins(pf, pf->synce.dpll, pf->synce.inputs,
-				      pf->synce.num_inputs, true);
+	err = ice_dpll_register_pins(pf, pf->synce.dpll, pf->synce.inputs,
+				     pf->synce.num_inputs, true);
 	if (err)
 		goto release;
-	err = ice_synce_register_pins(pf, pf->synce.dpll, pf->synce.outputs,
-				      pf->synce.num_outputs, false);
-	if (err) {
-		ice_synce_release_pins(pf->synce.dpll, pf->synce.inputs,
-				       pf->synce.num_inputs);
+	err = ice_dpll_register_pins(pf, pf->synce.dpll, pf->synce.outputs,
+				     pf->synce.num_outputs, false);
+	if (err)
+		ice_dpll_release_pins(pf->synce.dpll, pf->synce.inputs,
+				      pf->synce.num_inputs);
 		goto release;
 	}
 
 	dev_dbg(ice_pf_to_dev(pf), "SyncE init successful\n");
-	set_bit(ICE_FLAG_SYNCE, pf->flags);
-	mutex_unlock(&pf->synce.lock);
-
+	mutex_unlock(&pf->dpll_synce.lock);
 	return err;
 release:
 	dev_warn(ice_pf_to_dev(pf), "SyncE init failure\n");
@@ -945,7 +980,6 @@ unlock:
 	clear_bit(ICE_FLAG_SYNCE, pf->flags);
 	mutex_unlock(&pf->synce.lock);
 	mutex_destroy(&pf->synce.lock);
-
 	return err;
 }
 

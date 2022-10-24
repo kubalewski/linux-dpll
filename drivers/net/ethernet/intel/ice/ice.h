@@ -611,7 +611,8 @@ struct ice_pf {
 #define ICE_VF_AGG_NODE_ID_START	65
 #define ICE_MAX_VF_AGG_NODES		32
 	struct ice_agg_node vf_agg_node[ICE_MAX_VF_AGG_NODES];
-	struct ice_synce synce;
+	struct ice_dpll dpll_synce;
+	struct ice_dpll dpll_ptp;
 };
 
 struct ice_netdev_priv {

@@ -356,7 +356,6 @@ attribute-sets:
       -
         name: pin-frequency
         type: u32
-        multi-attr: true
       -
         name: pin-frequency-supported
         type: u32
@@ -395,6 +394,7 @@ attribute-sets:
         name: pin-state
         type: u8
         value: 22
+        enum: pin-state
       -
         name: pin-parent-idx
         type: u32

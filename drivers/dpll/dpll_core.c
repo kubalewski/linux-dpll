@@ -552,7 +552,7 @@ __dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 {
 	int ret;
 
-	if (rclk_device_name) {
+	if (rclk_device_name && !pin->rclk_dev_name) {
 		pin->rclk_dev_name = kstrdup(rclk_device_name, GFP_KERNEL);
 		if (!pin->rclk_dev_name)
 			return -ENOMEM;
@@ -670,20 +670,16 @@ dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 		return -EINVAL;
 	if (WARN_ON(parent->prop.type != DPLL_PIN_TYPE_MUX))
 		return -EPERM;
-	if (rclk_device) {
-		pin->rclk_dev_name = kstrdup(dev_name(rclk_device), GFP_KERNEL);
-		if (!pin->rclk_dev_name)
-			return -ENOMEM;
-	}
 	mutex_lock(&dpll_pin_xa_lock);
 	ret = dpll_xa_ref_pin_add(&pin->parent_refs, parent, ops, priv);
 	if (ret)
-		goto rclk_free;
+		goto unlock;
 	refcount_inc(&pin->refcount);
 	xa_for_each(&parent->dpll_refs, i, ref) {
 		mutex_lock(&dpll_device_xa_lock);
 		ret = __dpll_pin_register(ref->dpll, pin, ops, priv,
-					  dev_name(rclk_device));
+					  rclk_device ?
+					  dev_name(rclk_device) : NULL);
 		mutex_unlock(&dpll_device_xa_lock);
 		if (ret) {
 			stop = i;
@@ -705,9 +701,8 @@ dpll_deregister:
 	}
 	refcount_dec(&pin->refcount);
 	dpll_xa_ref_pin_del(&pin->parent_refs, parent);
-rclk_free:
+unlock:
 	mutex_unlock(&dpll_pin_xa_lock);
-	kfree(pin->rclk_dev_name);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dpll_pin_on_pin_register);

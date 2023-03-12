@@ -105,6 +105,8 @@ enum dpll_pin_direction {
 #define DPLL_PIN_FREQUENCY_10_KHZ	10000
 #define DPLL_PIN_FREQUENCY_77_5_KHZ	77500
 #define DPLL_PIN_FREQUENCY_10_MHZ	10000000
+#define DPLL_PIN_FREQUENCY_10_KHZ	10000
+#define DPLL_PIN_FREQUENCY_77_5_KHZ	77500
 
 /**
  * enum dpll_pin_state - defines possible states of a pin, valid values for

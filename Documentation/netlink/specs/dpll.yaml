@@ -172,7 +172,7 @@ definitions:
 attribute-sets:
   -
     name: dpll
-    enum-name: dplla
+    enum-name: dpll_a
     attributes:
       -
         name: id
@@ -308,6 +308,7 @@ attribute-sets:
         type: u8
 
 operations:
+  enum-name: dpll_cmd
   list:
     -
       name: device-get

@@ -133,7 +133,7 @@ enum dpll_pin_caps {
 	DPLL_PIN_CAPS_STATE_CAN_CHANGE = 4,
 };
 
-enum dplla {
+enum dpll_a {
 	DPLL_A_ID = 1,
 	DPLL_A_DEV_NAME,
 	DPLL_A_BUS_NAME,
@@ -163,7 +163,7 @@ enum dplla {
 	DPLL_A_MAX = (__DPLL_A_MAX - 1)
 };
 
-enum {
+enum dpll_cmd {
 	DPLL_CMD_DEVICE_GET = 1,
 	DPLL_CMD_DEVICE_SET,
 	DPLL_CMD_DEVICE_CREATE_NTF,

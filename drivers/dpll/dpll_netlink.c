@@ -814,7 +814,7 @@ int dpll_pin_post_dumpit(struct netlink_callback *cb)
 }
 
 static int
-dpll_device_event_send(enum dplla event, struct dpll_device *dpll)
+dpll_device_event_send(enum dpll_cmd event, struct dpll_device *dpll)
 {
 	struct sk_buff *msg;
 	int ret = -EMSGSIZE;
@@ -871,7 +871,7 @@ int dpll_device_change_ntf(struct dpll_device *dpll)
 EXPORT_SYMBOL_GPL(dpll_device_change_ntf);
 
 static int
-dpll_pin_event_send(enum dplla event, struct dpll_pin *pin)
+dpll_pin_event_send(enum dpll_cmd event, struct dpll_pin *pin)
 {
 	struct dpll_pin *pin_verify;
 	struct sk_buff *msg;

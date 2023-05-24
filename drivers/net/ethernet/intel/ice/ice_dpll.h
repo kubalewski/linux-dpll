@@ -36,31 +36,31 @@ struct ice_dpll_pin {
  * @dpll: pointer to dpll dev
  * @pf: pointer to pf, which has registered the dpll_device
  * @dpll_idx: index of dpll on the NIC
- * @source_idx: source currently selected
- * @prev_source_idx: source previously selected
+ * @input_idx: currently selected input index
+ * @prev_input_idx: previously selected input index
  * @ref_state: state of dpll reference signals
  * @eec_mode: eec_mode dpll is configured for
  * @phase_offset: phase delay of a dpll
  * @input_prio: priorities of each input
  * @dpll_state: current dpll sync state
  * @prev_dpll_state: last dpll sync state
- * @active_source: pointer to active source pin
- * @prev_source: pointer to previous active source pin
+ * @active_input: pointer to active input pin
+ * @prev_input: pointer to previous active input pin
  */
 struct ice_dpll {
 	struct dpll_device *dpll;
 	struct ice_pf *pf;
 	int dpll_idx;
-	u8 source_idx;
-	u8 prev_source_idx;
+	u8 input_idx;
+	u8 prev_input_idx;
 	u8 ref_state;
 	u8 eec_mode;
 	s64 phase_offset;
 	u8 *input_prio;
 	enum ice_cgu_state dpll_state;
 	enum ice_cgu_state prev_dpll_state;
-	struct dpll_pin *active_source;
-	struct dpll_pin *prev_source;
+	struct dpll_pin *active_input;
+	struct dpll_pin *prev_input;
 };
 
 /** ice_dplls - store info required for CCU (clock controlling unit)

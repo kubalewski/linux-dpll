@@ -4627,7 +4627,7 @@ static void ice_deinit_features(struct ice_pf *pf)
 		ice_ptp_release(pf);
 	if (ice_is_feature_supported(pf, ICE_F_PHY_RCLK) ||
 	    ice_is_feature_supported(pf, ICE_F_CGU))
-		ice_dpll_release(pf);
+		ice_dpll_deinit(pf);
 }
 
 static void ice_init_wakeup(struct ice_pf *pf)

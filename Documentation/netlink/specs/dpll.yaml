@@ -179,10 +179,7 @@ attribute-sets:
         type: u32
         value: 1
       -
-        name: dev-name
-        type: string
-      -
-        name: bus-name
+        name: module-name
         type: string
       -
         name: mode
@@ -261,12 +258,6 @@ attribute-sets:
         name: id
         type: u32
       -
-        name: dev-name
-        type: string
-      -
-        name: bus-name
-        type: string
-      -
         name: pin-direction
         type: u8
       -
@@ -310,13 +301,11 @@ operations:
         request:
           attributes:
             - id
-            - bus-name
-            - dev-name
+            - module-name
         reply: &dev-attrs
           attributes:
             - id
-            - dev-name
-            - bus-name
+            - module-name
             - mode
             - mode-supported
             - lock-status
@@ -341,8 +330,6 @@ operations:
         request:
           attributes:
             - id
-            - bus-name
-            - dev-name
             - mode
     -
       name: device-create-ntf
@@ -375,8 +362,6 @@ operations:
         request:
           attributes:
             - id
-            - bus-name
-            - dev-name
             - pin-id
         reply: &pin-attrs
           attributes:
@@ -395,8 +380,6 @@ operations:
         request:
           attributes:
             - id
-            - bus-name
-            - dev-name
         reply: *pin-attrs
 
     -
@@ -411,8 +394,6 @@ operations:
         request:
           attributes:
             - id
-            - bus-name
-            - dev-name
             - pin-id
             - pin-frequency
             - pin-direction

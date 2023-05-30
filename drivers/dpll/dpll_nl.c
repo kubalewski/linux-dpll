@@ -21,40 +21,31 @@ const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_RCLK_DEVICE + 1] = 
 };
 
 /* DPLL_CMD_DEVICE_GET - do */
-static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_BUS_NAME + 1] = {
+static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_MODULE_NAME + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_BUS_NAME] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_DEV_NAME] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_MODULE_NAME] = { .type = NLA_NUL_STRING, },
 };
 
 /* DPLL_CMD_DEVICE_SET - do */
 static const struct nla_policy dpll_device_set_nl_policy[DPLL_A_MODE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_BUS_NAME] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_DEV_NAME] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_MODE] = NLA_POLICY_MAX(NLA_U8, 4),
 };
 
 /* DPLL_CMD_PIN_GET - do */
 static const struct nla_policy dpll_pin_get_do_nl_policy[DPLL_A_PIN_ID + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_BUS_NAME] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_DEV_NAME] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_PIN_ID] = { .type = NLA_U32, },
 };
 
 /* DPLL_CMD_PIN_GET - dump */
-static const struct nla_policy dpll_pin_get_dump_nl_policy[DPLL_A_BUS_NAME + 1] = {
+static const struct nla_policy dpll_pin_get_dump_nl_policy[DPLL_A_ID + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_BUS_NAME] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_DEV_NAME] = { .type = NLA_NUL_STRING, },
 };
 
 /* DPLL_CMD_PIN_SET - do */
 static const struct nla_policy dpll_pin_set_nl_policy[DPLL_A_PIN_PARENT + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_BUS_NAME] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_DEV_NAME] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_PIN_ID] = { .type = NLA_U32, },
 	[DPLL_A_PIN_FREQUENCY] = { .type = NLA_U64, },
 	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_MAX(NLA_U8, 2),
@@ -71,7 +62,7 @@ static const struct genl_split_ops dpll_nl_ops[] = {
 		.doit		= dpll_nl_device_get_doit,
 		.post_doit	= dpll_post_doit,
 		.policy		= dpll_device_get_nl_policy,
-		.maxattr	= DPLL_A_BUS_NAME,
+		.maxattr	= DPLL_A_MODULE_NAME,
 		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DO,
 	},
 	{
@@ -105,7 +96,7 @@ static const struct genl_split_ops dpll_nl_ops[] = {
 		.dumpit		= dpll_nl_pin_get_dumpit,
 		.done		= dpll_pin_post_dumpit,
 		.policy		= dpll_pin_get_dump_nl_policy,
-		.maxattr	= DPLL_A_BUS_NAME,
+		.maxattr	= DPLL_A_ID,
 		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DUMP,
 	},
 	{

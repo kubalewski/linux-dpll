@@ -135,8 +135,7 @@ enum dpll_pin_caps {
 
 enum dpll_a {
 	DPLL_A_ID = 1,
-	DPLL_A_DEV_NAME,
-	DPLL_A_BUS_NAME,
+	DPLL_A_MODULE_NAME,
 	DPLL_A_MODE,
 	DPLL_A_MODE_SUPPORTED,
 	DPLL_A_LOCK_STATUS,

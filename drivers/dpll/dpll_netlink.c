@@ -217,7 +217,7 @@ dpll_msg_add_pin_parents(struct sk_buff *msg, struct dpll_pin *pin,
 		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT);
 		if (!nest)
 			return -EMSGSIZE;
-		if (nla_put_u32(msg, DPLL_A_PIN_PARENT_IDX, ppin->pin_idx)) {
+		if (nla_put_u32(msg, DPLL_A_PIN_ID, ppin->id)) {
 			ret = -EMSGSIZE;
 			goto nest_cancel;
 		}
@@ -245,7 +245,7 @@ dpll_msg_add_pin_dplls(struct sk_buff *msg, struct dpll_pin *pin,
 	int ret;
 
 	xa_for_each(&pin->dpll_refs, index, ref) {
-		attr = nla_nest_start(msg, DPLL_A_DEVICE);
+		attr = nla_nest_start(msg, DPLL_A_PIN_PARENT);
 		if (!attr)
 			return -EMSGSIZE;
 		ret = dpll_msg_add_dev_handle(msg, ref->dpll);
@@ -299,7 +299,7 @@ size_t dpll_msg_pin_handle_size(struct dpll_pin *pin)
 {
 	// TMP- THE HANDLE IS GOING TO CHANGE TO DRIVERNAME/CLOCKID/PIN_INDEX
 	// LEAVING ORIG HANDLE NOW AS PUT IN THE LAST RFC VERSION
-	return nla_total_size(4); /* DPLL_A_PIN_IDX */
+	return nla_total_size(4); /* DPLL_A_PIN_ID */
 }
 EXPORT_SYMBOL_GPL(dpll_msg_pin_handle_size);
 
@@ -307,7 +307,7 @@ int dpll_msg_add_pin_handle(struct sk_buff *msg, struct dpll_pin *pin)
 {
 	// TMP- THE HANDLE IS GOING TO CHANGE TO DRIVERNAME/CLOCKID/PIN_INDEX
 	// LEAVING ORIG HANDLE NOW AS PUT IN THE LAST RFC VERSION
-	if (nla_put_u32(msg, DPLL_A_PIN_IDX, pin->pin_idx))
+	if (nla_put_u32(msg, DPLL_A_PIN_ID, pin->id))
 		return -EMSGSIZE;
 	return 0;
 }
@@ -408,33 +408,37 @@ dpll_pin_freq_set(struct dpll_pin *pin, struct nlattr *a,
 }
 
 static int
-dpll_pin_on_pin_state_set(struct dpll_device *dpll, struct dpll_pin *pin,
-			  u32 parent_idx, enum dpll_pin_state state,
+dpll_pin_on_pin_state_set(struct dpll_pin *pin, u32 parent_idx,
+			  enum dpll_pin_state state,
 			  struct netlink_ext_ack *extack)
 {
+	struct dpll_pin_ref *parent_ref;
 	const struct dpll_pin_ops *ops;
-	struct dpll_pin_ref *pin_ref, *parent_ref;
+	struct dpll_pin_ref *dpll_ref;
+	struct dpll_pin *parent;
+	unsigned long i;
 
 	if (!(DPLL_PIN_CAPS_STATE_CAN_CHANGE & pin->prop.capabilities))
 		return -EOPNOTSUPP;
-	parent_ref = xa_load(&pin->parent_refs, parent_idx);
-	       //	dpll_pin_get_by_idx(dpll, parent_idx);
+	parent = xa_load(&dpll_pin_xa, parent_idx);
+	if (!parent)
+		return -EINVAL;
+	parent_ref = xa_load(&pin->parent_refs, parent->pin_idx);
 	if (!parent_ref)
 		return -EINVAL;
-	pin_ref = xa_load(&dpll->pin_refs, pin->pin_idx);
-	if (!pin_ref)
-		return -EINVAL;
-	ops = dpll_pin_ops(pin_ref);
-	if (!ops->state_on_pin_set)
-		return -EOPNOTSUPP;
-	if (ops->state_on_pin_set(pin_ref->pin,
-				  dpll_pin_on_pin_priv(parent_ref->pin,
-						       pin_ref->pin),
-				  parent_ref->pin,
-				  dpll_pin_on_dpll_priv(dpll, parent_ref->pin),
-				  state, extack))
-		return -EFAULT;
-	__dpll_pin_change_ntf(pin_ref->pin);
+	xa_for_each(&parent->dpll_refs, i, dpll_ref) {
+		ops = dpll_pin_ops(parent_ref);
+		if (!ops->state_on_pin_set)
+			return -EOPNOTSUPP;
+		if (ops->state_on_pin_set(pin,
+					  dpll_pin_on_pin_priv(parent, pin),
+					  parent,
+					  dpll_pin_on_dpll_priv(dpll_ref->dpll,
+								parent),
+					  state, extack))
+			return -EFAULT;
+	}
+	__dpll_pin_change_ntf(pin);
 
 	return 0;
 }
@@ -465,12 +469,10 @@ dpll_pin_state_set(struct dpll_device *dpll, struct dpll_pin *pin,
 
 static int
 dpll_pin_prio_set(struct dpll_device *dpll, struct dpll_pin *pin,
-		  struct nlattr *prio_attr, struct netlink_ext_ack *extack)
+		  u32 prio, struct netlink_ext_ack *extack)
 {
 	const struct dpll_pin_ops *ops;
 	struct dpll_pin_ref *ref;
-	u32 prio = nla_get_u8(prio_attr);
-
 	if (!(DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE & pin->prop.capabilities))
 		return -EOPNOTSUPP;
 	ref = xa_load(&pin->dpll_refs, dpll->device_idx);
@@ -513,14 +515,80 @@ dpll_pin_direction_set(struct dpll_pin *pin, struct nlattr *a,
 }
 
 static int
-dpll_pin_set_from_nlattr(struct dpll_device *dpll,
-			 struct dpll_pin *pin, struct genl_info *info)
+dpll_pin_parent_set(struct dpll_pin *pin, struct nlattr *parent_nest,
+		    struct netlink_ext_ack *extack)
 {
-	enum dpll_pin_state state = 0;
-	bool parent_present = false;
+	bool state_present = false, prio_present = false;
+	bool parent_dpll = false, parent_pin = false;
+	u32 parent_idx, dpll_idx, prio;
+	enum dpll_pin_state state;
+	struct dpll_pin_ref *ref;
+	struct dpll_device *dpll;
+	struct nlattr *a;
+	int rem, ret;
+
+	nla_for_each_nested(a, parent_nest, rem) {
+		switch (nla_type(a)) {
+		case DPLL_A_ID:
+			dpll_idx = nla_get_u32(a);
+			parent_dpll = true;
+			break;
+		case DPLL_A_PIN_ID:
+			parent_idx = nla_get_u32(a);
+			parent_pin = true;
+			break;
+		case DPLL_A_PIN_STATE:
+			state = nla_get_u8(a);
+			state_present = true;
+			break;
+		case DPLL_A_PIN_PRIO:
+			prio = nla_get_u32(a);
+			prio_present = true;
+			break;
+		default:
+			break;
+		}
+	}
+	if (parent_pin && !state_present) {
+		NL_SET_ERR_MSG(extack, "pin state is missing");
+		return -EINVAL;
+	}
+	if (parent_dpll && !(state_present || prio_present)) {
+		NL_SET_ERR_MSG(extack, "both pin state and prio are missing");
+		return -EINVAL;
+	}
+	if (parent_pin) {
+		ret = dpll_pin_on_pin_state_set(pin, parent_idx, state, extack);
+		if (ret)
+			return ret;
+	} else if (parent_dpll) {
+		dpll = xa_load(&dpll_device_xa, dpll_idx);
+		if (!dpll)
+			return -EINVAL;
+		ref = xa_load(&pin->dpll_refs, dpll->device_idx);
+		if (!ref)
+			return -EINVAL;
+		if (state_present) {
+
+			ret = dpll_pin_state_set(dpll, pin, state, extack);
+			if (ret)
+				return ret;
+		}
+		if (prio_present) {
+			ret = dpll_pin_prio_set(dpll, pin, prio, extack);
+			if (ret)
+				return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int
+dpll_pin_set_from_nlattr(struct dpll_pin *pin, struct genl_info *info)
+{
 	int rem, ret = -EINVAL;
 	struct nlattr *a;
-	u32 parent_idx;
 
 	nla_for_each_attr(a, genlmsg_data(info->genlhdr),
 			  genlmsg_len(info->genlhdr), rem) {
@@ -535,50 +603,35 @@ dpll_pin_set_from_nlattr(struct dpll_device *dpll,
 			if (ret)
 				return ret;
 			break;
-		case DPLL_A_PIN_PRIO:
-			ret = dpll_pin_prio_set(dpll, pin, a, info->extack);
+		case DPLL_A_PIN_PARENT:
+			ret = dpll_pin_parent_set(pin, a, info->extack);
 			if (ret)
 				return ret;
 			break;
-		case DPLL_A_PIN_PARENT_IDX:
-			parent_present = true;
-			parent_idx = nla_get_u32(a);
-			break;
-		case DPLL_A_PIN_STATE:
-			state = nla_get_u8(a);
+		case DPLL_A_PIN_ID:
+		case DPLL_A_ID:
 			break;
 		default:
-			break;
-		}
-	}
-	if (state) {
-		if (!parent_present) {
-			ret = dpll_pin_state_set(dpll, pin, state,
-						 info->extack);
-			if (ret)
-				return ret;
-		} else {
-			ret = dpll_pin_on_pin_state_set(dpll, pin, parent_idx,
-							state, info->extack);
-			if (ret)
-				return ret;
+			NL_SET_ERR_MSG_FMT(info->extack,
+					   "unsupported attribute (%d)",
+					   nla_type(a));
+			return -EINVAL;
 		}
 	}
 
-	return ret;
+	return 0;
 }
 
 int dpll_nl_pin_set_doit(struct sk_buff *skb, struct genl_info *info)
 {
-	struct dpll_device *dpll = info->user_ptr[0];
-	struct dpll_pin *pin = info->user_ptr[1];
+	struct dpll_pin *pin = info->user_ptr[0];
 
-	return dpll_pin_set_from_nlattr(dpll, pin, info);
+	return dpll_pin_set_from_nlattr(pin, info);
 }
 
 int dpll_nl_pin_get_doit(struct sk_buff *skb, struct genl_info *info)
 {
-	struct dpll_pin *pin = info->user_ptr[1];
+	struct dpll_pin *pin = info->user_ptr[0];
 	struct sk_buff *msg;
 	struct nlattr *hdr;
 	int ret;
@@ -771,24 +824,19 @@ int dpll_post_dumpit(struct netlink_callback *cb)
 int dpll_pin_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		      struct genl_info *info)
 {
-	int ret = dpll_pre_doit(ops, skb, info);
-	struct dpll_pin_ref *pin_ref;
-	struct dpll_device *dpll;
+	int ret;
 
-	if (ret)
-		return ret;
-	dpll = info->user_ptr[0];
-	if (!info->attrs[DPLL_A_PIN_IDX]) {
+	mutex_lock(&dpll_xa_lock);
+	if (!info->attrs[DPLL_A_PIN_ID]) {
 		ret = -EINVAL;
 		goto unlock_dev;
 	}
-	pin_ref = xa_load(&dpll->pin_refs,
-			  nla_get_u32(info->attrs[DPLL_A_PIN_IDX]));
-	if (!pin_ref) {
+	info->user_ptr[0] = xa_load(&dpll_pin_xa,
+				    nla_get_u32(info->attrs[DPLL_A_PIN_ID]));
+	if (!info->user_ptr[0]) {
 		ret = -ENODEV;
 		goto unlock_dev;
 	}
-	info->user_ptr[1] = pin_ref->pin;
 
 	return 0;
 
@@ -800,7 +848,7 @@ unlock_dev:
 void dpll_pin_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 			struct genl_info *info)
 {
-	dpll_post_doit(ops, skb, info);
+	mutex_unlock(&dpll_xa_lock);
 }
 
 int dpll_pin_pre_dumpit(struct netlink_callback *cb)

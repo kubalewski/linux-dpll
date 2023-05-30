@@ -208,7 +208,7 @@ attribute-sets:
         type: u8
         enum: type
       -
-        name: pin-idx
+        name: pin-id
         type: u32
       -
         name: pin-label
@@ -248,44 +248,13 @@ attribute-sets:
         multi-attr: true
         nested-attributes: pin-parent
       -
-        name: pin-parent-idx
-        type: u32
-      -
         name: pin-rclk-device
         type: string
       -
         name: pin-dpll-caps
         type: u32
-      -
-        name: device
-        type: nest
-        multi-attr: true
-        nested-attributes: device
   -
     name: pin-parent
-    subset-of: dpll
-    attributes:
-      -
-        name: pin-state
-        type: u8
-      -
-        name: pin-parent-idx
-        type: u32
-      -
-        name: pin-rclk-device
-        type: string
-  -
-    name: pin-frequency-range
-    subset-of: dpll
-    attributes:
-      -
-        name: pin-frequency-min
-        type: u64
-      -
-        name: pin-frequency-max
-        type: u64
-  -
-    name: device
     subset-of: dpll
     attributes:
       -
@@ -298,14 +267,31 @@ attribute-sets:
         name: bus-name
         type: string
       -
+        name: pin-direction
+        type: u8
+      -
         name: pin-prio
         type: u32
       -
         name: pin-state
         type: u8
       -
-        name: pin-direction
-        type: u8
+        name: pin-id
+        type: u32
+      -
+        name: pin-rclk-device
+        type: string
+
+  -
+    name: pin-frequency-range
+    subset-of: dpll
+    attributes:
+      -
+        name: pin-frequency-min
+        type: u64
+      -
+        name: pin-frequency-max
+        type: u64
 
 operations:
   enum-name: dpll_cmd
@@ -391,10 +377,10 @@ operations:
             - id
             - bus-name
             - dev-name
-            - pin-idx
+            - pin-id
         reply: &pin-attrs
           attributes:
-            - pin-idx
+            - pin-id
             - pin-label
             - pin-type
             - pin-frequency
@@ -402,7 +388,6 @@ operations:
             - pin-parent
             - pin-rclk-device
             - pin-dpll-caps
-            - device
 
       dump:
         pre: dpll-pin-pre-dumpit
@@ -428,12 +413,12 @@ operations:
             - id
             - bus-name
             - dev-name
-            - pin-idx
+            - pin-id
             - pin-frequency
             - pin-direction
             - pin-prio
             - pin-state
-            - pin-parent-idx
+            - pin-parent
     -
       name: pin-create-ntf
       doc: Notification about pin appearing

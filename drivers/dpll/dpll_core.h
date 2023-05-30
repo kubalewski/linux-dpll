@@ -40,7 +40,6 @@ struct dpll_device {
 	u32 device_idx;
 	u64 clock_id;
 	struct module *module;
-	struct device dev;
 	struct device *parent;
 	enum dpll_type type;
 	struct xarray pin_refs;

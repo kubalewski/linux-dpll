@@ -28,10 +28,6 @@ dpll_msg_add_dev_handle(struct sk_buff *msg, struct dpll_device *dpll)
 {
 	if (nla_put_u32(msg, DPLL_A_ID, dpll->id))
 		return -EMSGSIZE;
-	if (nla_put_string(msg, DPLL_A_BUS_NAME, dev_bus_name(&dpll->dev)))
-		return -EMSGSIZE;
-	if (nla_put_string(msg, DPLL_A_DEV_NAME, dev_name(&dpll->dev)))
-		return -EMSGSIZE;
 
 	return 0;
 }
@@ -279,6 +275,11 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	ret = dpll_msg_add_pin_handle(msg, pin);
 	if (ret)
 		return ret;
+	if (nla_put_string(msg, DPLL_A_MODULE_NAME, pin->module->name))
+		return -EMSGSIZE;
+	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(pin->clock_id),
+			  &pin->clock_id, 0))
+		return -EMSGSIZE;
 	if (nla_put_string(msg, DPLL_A_PIN_LABEL, pin->prop.label))
 		return -EMSGSIZE;
 	if (nla_put_u8(msg, DPLL_A_PIN_TYPE, pin->prop.type))
@@ -348,6 +349,11 @@ dpll_device_get_one(struct dpll_device *dpll, struct sk_buff *msg,
 	ret = dpll_msg_add_dev_handle(msg, dpll);
 	if (ret)
 		return ret;
+	if (nla_put_string(msg, DPLL_A_MODULE_NAME, dpll->module->name))
+		return -EMSGSIZE;
+	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(dpll->clock_id),
+			  &dpll->clock_id, 0))
+		return -EMSGSIZE;
 	ret = dpll_msg_add_temp(msg, dpll, extack);
 	if (ret && ret != -EOPNOTSUPP)
 		return ret;
@@ -361,9 +367,6 @@ dpll_device_get_one(struct dpll_device *dpll, struct sk_buff *msg,
 		if (test_bit(mode, &dpll->mode_supported_mask))
 			if (nla_put_s32(msg, DPLL_A_MODE_SUPPORTED, mode))
 				return -EMSGSIZE;
-	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(dpll->clock_id),
-			  &dpll->clock_id, 0))
-		return -EMSGSIZE;
 	if (nla_put_u8(msg, DPLL_A_TYPE, dpll->type))
 		return -EMSGSIZE;
 

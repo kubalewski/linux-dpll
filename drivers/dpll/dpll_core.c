@@ -41,32 +41,6 @@ struct dpll_device *dpll_device_get_by_id(int id)
 	return NULL;
 }
 
-/**
- * dpll_device_get_by_name - find dpll device by it's id
- * @bus_name: bus name of searched dpll
- * @dev_name: dev name of searched dpll
- *
- * Return:
- * * dpll_device struct if found
- * * NULL otherwise
- */
-struct dpll_device *
-dpll_device_get_by_name(const char *bus_name, const char *device_name)
-{
-	struct dpll_device *dpll, *ret = NULL;
-	unsigned long i;
-
-	xa_for_each_marked(&dpll_device_xa, i, dpll, DPLL_REGISTERED) {
-		if (!strcmp(dev_bus_name(&dpll->dev), bus_name) &&
-		    !strcmp(dev_name(&dpll->dev), device_name)) {
-			ret = dpll;
-			break;
-		}
-	}
-
-	return ret;
-}
-
 static struct dpll_pin_registration *
 dpll_pin_registration_find(struct dpll_pin_ref *ref,
 			   const struct dpll_pin_ops *ops, void *priv)
@@ -469,11 +443,8 @@ int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 	reg->ops = ops;
 	reg->priv = priv;
 
-	dpll->dev.bus = owner->bus;
 	dpll->parent = owner;
 	dpll->type = type;
-	dev_set_name(&dpll->dev, "%s/%llx/%d", module_name(dpll->module),
-		     dpll->clock_id, dpll->device_idx);
 
 	first_registration = list_empty(&dpll->registration_list);
 	list_add_tail(&reg->list, &dpll->registration_list);

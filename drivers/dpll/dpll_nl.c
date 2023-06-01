@@ -20,6 +20,13 @@ const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_RCLK_DEVICE + 1] = 
 	[DPLL_A_PIN_RCLK_DEVICE] = { .type = NLA_NUL_STRING, },
 };
 
+/* DPLL_CMD_DEVICE_ID_GET - do */
+static const struct nla_policy dpll_device_id_get_nl_policy[DPLL_A_TYPE + 1] = {
+	[DPLL_A_MODULE_NAME] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_CLOCK_ID] = { .type = NLA_U64, },
+	[DPLL_A_TYPE] = NLA_POLICY_MAX(NLA_U8, 2),
+};
+
 /* DPLL_CMD_DEVICE_GET - do */
 static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_MODULE_NAME + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
@@ -30,6 +37,16 @@ static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_MODULE_NAME + 1]
 static const struct nla_policy dpll_device_set_nl_policy[DPLL_A_MODE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
 	[DPLL_A_MODE] = NLA_POLICY_MAX(NLA_U8, 4),
+};
+
+/* DPLL_CMD_PIN_ID_GET - do */
+static const struct nla_policy dpll_pin_id_get_nl_policy[DPLL_A_PIN_TYPE + 1] = {
+	[DPLL_A_MODULE_NAME] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_CLOCK_ID] = { .type = NLA_U64, },
+	[DPLL_A_PIN_BOARD_LABEL] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_PIN_PANEL_LABEL] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_PIN_PACKAGE_LABEL] = { .type = NLA_NUL_STRING, },
+	[DPLL_A_PIN_TYPE] = NLA_POLICY_MAX(NLA_U8, 5),
 };
 
 /* DPLL_CMD_PIN_GET - do */
@@ -57,6 +74,15 @@ static const struct nla_policy dpll_pin_set_nl_policy[DPLL_A_PIN_PARENT + 1] = {
 /* Ops table for dpll */
 static const struct genl_split_ops dpll_nl_ops[] = {
 	{
+		.cmd		= DPLL_CMD_DEVICE_ID_GET,
+		.pre_doit	= dpll_lock_doit,
+		.doit		= dpll_nl_device_id_get_doit,
+		.post_doit	= dpll_unlock_doit,
+		.policy		= dpll_device_id_get_nl_policy,
+		.maxattr	= DPLL_A_TYPE,
+		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DO,
+	},
+	{
 		.cmd		= DPLL_CMD_DEVICE_GET,
 		.pre_doit	= dpll_pre_doit,
 		.doit		= dpll_nl_device_get_doit,
@@ -67,9 +93,9 @@ static const struct genl_split_ops dpll_nl_ops[] = {
 	},
 	{
 		.cmd	= DPLL_CMD_DEVICE_GET,
-		.start	= dpll_pre_dumpit,
+		.start	= dpll_lock_dumpit,
 		.dumpit	= dpll_nl_device_get_dumpit,
-		.done	= dpll_post_dumpit,
+		.done	= dpll_unlock_dumpit,
 		.flags	= GENL_ADMIN_PERM | GENL_CMD_CAP_DUMP,
 	},
 	{
@@ -79,6 +105,15 @@ static const struct genl_split_ops dpll_nl_ops[] = {
 		.post_doit	= dpll_post_doit,
 		.policy		= dpll_device_set_nl_policy,
 		.maxattr	= DPLL_A_MODE,
+		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DO,
+	},
+	{
+		.cmd		= DPLL_CMD_PIN_ID_GET,
+		.pre_doit	= dpll_lock_doit,
+		.doit		= dpll_nl_pin_id_get_doit,
+		.post_doit	= dpll_unlock_doit,
+		.policy		= dpll_pin_id_get_nl_policy,
+		.maxattr	= DPLL_A_PIN_TYPE,
 		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DO,
 	},
 	{
@@ -92,9 +127,9 @@ static const struct genl_split_ops dpll_nl_ops[] = {
 	},
 	{
 		.cmd		= DPLL_CMD_PIN_GET,
-		.start		= dpll_pin_pre_dumpit,
+		.start		= dpll_lock_dumpit,
 		.dumpit		= dpll_nl_pin_get_dumpit,
-		.done		= dpll_pin_post_dumpit,
+		.done		= dpll_unlock_dumpit,
 		.policy		= dpll_pin_get_dump_nl_policy,
 		.maxattr	= DPLL_A_ID,
 		.flags		= GENL_ADMIN_PERM | GENL_CMD_CAP_DUMP,

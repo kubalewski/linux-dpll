@@ -14,24 +14,29 @@
 /* Common nested types */
 extern const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_RCLK_DEVICE + 1];
 
+int dpll_lock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
+		   struct genl_info *info);
 int dpll_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		  struct genl_info *info);
 int dpll_pin_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		      struct genl_info *info);
+void
+dpll_unlock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
+		 struct genl_info *info);
 void
 dpll_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 	       struct genl_info *info);
 void
 dpll_pin_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		   struct genl_info *info);
-int dpll_pre_dumpit(struct netlink_callback *cb);
-int dpll_pin_pre_dumpit(struct netlink_callback *cb);
-int dpll_post_dumpit(struct netlink_callback *cb);
-int dpll_pin_post_dumpit(struct netlink_callback *cb);
+int dpll_lock_dumpit(struct netlink_callback *cb);
+int dpll_unlock_dumpit(struct netlink_callback *cb);
 
+int dpll_nl_device_id_get_doit(struct sk_buff *skb, struct genl_info *info);
 int dpll_nl_device_get_doit(struct sk_buff *skb, struct genl_info *info);
 int dpll_nl_device_get_dumpit(struct sk_buff *skb, struct netlink_callback *cb);
 int dpll_nl_device_set_doit(struct sk_buff *skb, struct genl_info *info);
+int dpll_nl_pin_id_get_doit(struct sk_buff *skb, struct genl_info *info);
 int dpll_nl_pin_get_doit(struct sk_buff *skb, struct genl_info *info);
 int dpll_nl_pin_get_dumpit(struct sk_buff *skb, struct netlink_callback *cb);
 int dpll_nl_pin_set_doit(struct sk_buff *skb, struct genl_info *info);

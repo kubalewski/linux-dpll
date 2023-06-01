@@ -633,11 +633,120 @@ dpll_pin_set_from_nlattr(struct dpll_pin *pin, struct genl_info *info)
 	return 0;
 }
 
-int dpll_nl_pin_set_doit(struct sk_buff *skb, struct genl_info *info)
+static struct dpll_pin *
+dpll_pin_find(u64 clock_id, struct nlattr *mod_name_attr,
+	      enum dpll_pin_type type, struct nlattr *board_label,
+	      struct nlattr *panel_label, struct nlattr *package_label)
 {
-	struct dpll_pin *pin = info->user_ptr[0];
+	bool board_match, panel_match, package_match;
+	struct dpll_pin *pin_match = NULL, *pin;
+	bool cid_match, mod_match, type_match;
+	unsigned long i;
 
-	return dpll_pin_set_from_nlattr(pin, info);
+	xa_for_each(&dpll_pin_xa, i, pin) {
+		if (xa_empty(&pin->dpll_refs))
+			continue;
+		cid_match = clock_id ? pin->clock_id == clock_id : true;
+		mod_match = mod_name_attr ?
+			!nla_strcmp(mod_name_attr, pin->module->name) : true;
+		type_match = type ? pin->prop.type == type : true;
+		board_match = board_label && pin->prop.board_label ?
+			!nla_strcmp(board_label, pin->prop.board_label) : true;
+		panel_match = panel_label && pin->prop.panel_label ?
+			!nla_strcmp(panel_label, pin->prop.panel_label) : true;
+		package_match = package_label && pin->prop.package_label ?
+			!nla_strcmp(package_label,
+				    pin->prop.package_label) : true;
+		if (cid_match && mod_match && type_match && board_match &&
+		    panel_match && package_match) {
+			if (pin_match)
+				return NULL;
+			pin_match = pin;
+		};
+	}
+
+	return pin_match;
+}
+
+static int
+dpll_pin_find_from_nlattr(struct genl_info *info, struct sk_buff *skb)
+{
+	struct nlattr *attr, *mod_name_attr = NULL, *board_label_attr = NULL,
+		*panel_label_attr = NULL, *package_label_attr = NULL;
+	struct dpll_pin *pin = NULL;
+	enum dpll_pin_type type = 0;
+	u64 clock_id = 0;
+	int rem = 0;
+
+	nla_for_each_attr(attr, genlmsg_data(info->genlhdr),
+			  genlmsg_len(info->genlhdr), rem) {
+		switch (nla_type(attr)) {
+		case DPLL_A_CLOCK_ID:
+			if (clock_id)
+				return -EINVAL;
+			clock_id = nla_get_u64(attr);
+			break;
+		case DPLL_A_MODULE_NAME:
+			if (mod_name_attr)
+				return -EINVAL;
+			mod_name_attr = attr;
+			break;
+		case DPLL_A_PIN_TYPE:
+			if (type)
+				return -EINVAL;
+			type = nla_get_u8(attr);
+			break;
+		case DPLL_A_PIN_BOARD_LABEL:
+			if (board_label_attr)
+				return -EINVAL;
+			board_label_attr = attr;
+			break;
+		case DPLL_A_PIN_PANEL_LABEL:
+			if (panel_label_attr)
+				return -EINVAL;
+			panel_label_attr = attr;
+			break;
+		case DPLL_A_PIN_PACKAGE_LABEL:
+			if (package_label_attr)
+				return -EINVAL;
+			package_label_attr = attr;
+			break;
+		default:
+			break;
+		}
+	}
+	if (!(clock_id  || mod_name_attr || board_label_attr ||
+	      panel_label_attr || package_label_attr))
+		return -EINVAL;
+	pin = dpll_pin_find(clock_id, mod_name_attr, type, board_label_attr,
+			    panel_label_attr, package_label_attr);
+	if (!pin)
+		return -EINVAL;
+	return dpll_msg_add_pin_handle(skb, pin);
+}
+
+int dpll_nl_pin_id_get_doit(struct sk_buff *skb, struct genl_info *info)
+{
+	struct sk_buff *msg;
+	struct nlattr *hdr;
+	int ret;
+
+	msg = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+	if (!msg)
+		return -ENOMEM;
+	hdr = genlmsg_put_reply(msg, info, &dpll_nl_family, 0,
+				DPLL_CMD_PIN_ID_GET);
+	if (!hdr)
+		return -EMSGSIZE;
+
+	ret = dpll_pin_find_from_nlattr(info, msg);
+	if (ret) {
+		nlmsg_free(msg);
+		return ret;
+	}
+	genlmsg_end(msg, hdr);
+
+	return genlmsg_reply(msg, info);
 }
 
 int dpll_nl_pin_get_doit(struct sk_buff *skb, struct genl_info *info)
@@ -699,6 +808,77 @@ int dpll_nl_pin_get_dumpit(struct sk_buff *skb, struct netlink_callback *cb)
 	return ret;
 }
 
+int dpll_nl_pin_set_doit(struct sk_buff *skb, struct genl_info *info)
+{
+	struct dpll_pin *pin = info->user_ptr[0];
+
+	return dpll_pin_set_from_nlattr(pin, info);
+}
+
+static struct dpll_device *
+dpll_device_find(u64 clock_id, struct nlattr *mod_name_attr,
+		 enum dpll_type type)
+{
+	struct dpll_device *dpll_match = NULL, *dpll;
+	bool cid_match, mod_match, type_match;
+	unsigned long i;
+
+	xa_for_each_marked(&dpll_device_xa, i, dpll, DPLL_REGISTERED) {
+		cid_match = clock_id ? dpll->clock_id == clock_id : true;
+		mod_match = mod_name_attr ?
+			!nla_strcmp(mod_name_attr, dpll->module->name) : true;
+		type_match = type ? dpll->type == type : true;
+		if (cid_match && mod_match && type_match) {
+			if (dpll_match)
+				return NULL;
+			dpll_match = dpll;
+		}
+	}
+
+	return dpll_match;
+}
+
+static int
+dpll_device_find_from_nlattr(struct genl_info *info, struct sk_buff *skb)
+{
+	struct nlattr *attr, *mod_name_attr = NULL;
+	struct dpll_device *dpll = NULL;
+	enum dpll_type type = 0;
+	u64 clock_id = 0;
+	int rem = 0;
+
+	nla_for_each_attr(attr, genlmsg_data(info->genlhdr),
+			  genlmsg_len(info->genlhdr), rem) {
+		switch (nla_type(attr)) {
+		case DPLL_A_CLOCK_ID:
+			if (clock_id)
+				return -EINVAL;
+			clock_id = nla_get_u64(attr);
+			break;
+		case DPLL_A_MODULE_NAME:
+			if (mod_name_attr)
+				return -EINVAL;
+			mod_name_attr = attr;
+			break;
+		case DPLL_A_TYPE:
+			if (type)
+				return -EINVAL;
+			type = nla_get_u8(attr);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (!clock_id && !mod_name_attr && !type)
+		return -EINVAL;
+	dpll = dpll_device_find(clock_id, mod_name_attr, type);
+	if (!dpll)
+		return -EINVAL;
+
+	return dpll_msg_add_dev_handle(skb, dpll);
+}
+
 static int
 dpll_set_from_nlattr(struct dpll_device *dpll, struct genl_info *info)
 {
@@ -726,11 +906,28 @@ dpll_set_from_nlattr(struct dpll_device *dpll, struct genl_info *info)
 	return ret;
 }
 
-int dpll_nl_device_set_doit(struct sk_buff *skb, struct genl_info *info)
+int dpll_nl_device_id_get_doit(struct sk_buff *skb, struct genl_info *info)
 {
-	struct dpll_device *dpll = info->user_ptr[0];
+	struct sk_buff *msg;
+	struct nlattr *hdr;
+	int ret;
 
-	return dpll_set_from_nlattr(dpll, info);
+	msg = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+	if (!msg)
+		return -ENOMEM;
+	hdr = genlmsg_put_reply(msg, info, &dpll_nl_family, 0,
+				DPLL_CMD_DEVICE_ID_GET);
+	if (!hdr)
+		return -EMSGSIZE;
+
+	ret = dpll_device_find_from_nlattr(info, msg);
+	if (ret) {
+		nlmsg_free(msg);
+		return ret;
+	}
+	genlmsg_end(msg, hdr);
+
+	return genlmsg_reply(msg, info);
 }
 
 int dpll_nl_device_get_doit(struct sk_buff *skb, struct genl_info *info)
@@ -756,6 +953,13 @@ int dpll_nl_device_get_doit(struct sk_buff *skb, struct genl_info *info)
 	genlmsg_end(msg, hdr);
 
 	return genlmsg_reply(msg, info);
+}
+
+int dpll_nl_device_set_doit(struct sk_buff *skb, struct genl_info *info)
+{
+	struct dpll_device *dpll = info->user_ptr[0];
+
+	return dpll_set_from_nlattr(dpll, info);
 }
 
 int dpll_nl_device_get_dumpit(struct sk_buff *skb, struct netlink_callback *cb)
@@ -818,14 +1022,30 @@ void dpll_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 	mutex_unlock(&dpll_xa_lock);
 }
 
-int dpll_pre_dumpit(struct netlink_callback *cb)
+int
+dpll_lock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
+		     struct genl_info *info)
 {
 	mutex_lock(&dpll_xa_lock);
 
 	return 0;
 }
 
-int dpll_post_dumpit(struct netlink_callback *cb)
+void
+dpll_unlock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
+		   struct genl_info *info)
+{
+	mutex_unlock(&dpll_xa_lock);
+}
+
+int dpll_lock_dumpit(struct netlink_callback *cb)
+{
+	mutex_lock(&dpll_xa_lock);
+
+	return 0;
+}
+
+int dpll_unlock_dumpit(struct netlink_callback *cb)
 {
 	mutex_unlock(&dpll_xa_lock);
 
@@ -860,16 +1080,6 @@ void dpll_pin_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 			struct genl_info *info)
 {
 	mutex_unlock(&dpll_xa_lock);
-}
-
-int dpll_pin_pre_dumpit(struct netlink_callback *cb)
-{
-	return dpll_pre_dumpit(cb);
-}
-
-int dpll_pin_post_dumpit(struct netlink_callback *cb)
-{
-	return dpll_post_dumpit(cb);
 }
 
 static int

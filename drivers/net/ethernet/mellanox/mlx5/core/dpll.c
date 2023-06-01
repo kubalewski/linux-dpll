@@ -202,7 +202,6 @@ static const struct dpll_pin_ops mlx5_dpll_pins_ops = {
 };
 
 static const struct dpll_pin_properties mlx5_dpll_pin_properties = {
-	.label = "n/a",
 	.type = DPLL_PIN_TYPE_SYNCE_ETH_PORT,
 	.capabilities = DPLL_PIN_CAPS_STATE_CAN_CHANGE,
 };

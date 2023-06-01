@@ -208,7 +208,13 @@ attribute-sets:
         name: pin-id
         type: u32
       -
-        name: pin-label
+        name: pin-board-label
+        type: string
+      -
+        name: pin-panel-label
+        type: string
+      -
+        name: pin-package-label
         type: string
       -
         name: pin-type
@@ -366,7 +372,9 @@ operations:
         reply: &pin-attrs
           attributes:
             - pin-id
-            - pin-label
+            - pin-board-label
+            - pin-panel-label
+            - pin-package-label
             - pin-type
             - pin-frequency
             - pin-frequency-supported

@@ -280,7 +280,15 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(pin->clock_id),
 			  &pin->clock_id, 0))
 		return -EMSGSIZE;
-	if (nla_put_string(msg, DPLL_A_PIN_LABEL, pin->prop.label))
+	if (pin->prop.board_label &&
+	    nla_put_string(msg, DPLL_A_PIN_BOARD_LABEL, pin->prop.board_label))
+		return -EMSGSIZE;
+	if (pin->prop.panel_label &&
+	    nla_put_string(msg, DPLL_A_PIN_PANEL_LABEL, pin->prop.panel_label))
+		return -EMSGSIZE;
+	if (pin->prop.package_label &&
+	    nla_put_string(msg, DPLL_A_PIN_PACKAGE_LABEL,
+			   pin->prop.package_label))
 		return -EMSGSIZE;
 	if (nla_put_u8(msg, DPLL_A_PIN_TYPE, pin->prop.type))
 		return -EMSGSIZE;

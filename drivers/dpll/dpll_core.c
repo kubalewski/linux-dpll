@@ -520,15 +520,9 @@ dpll_pin_alloc(u64 clock_id, u8 pin_idx, struct module *module,
 	pin->clock_id = clock_id;
 	pin->module = module;
 	refcount_set(&pin->refcount, 1);
-	if (WARN_ON(!prop->label)) {
-		ret = -EINVAL;
-		goto err;
-	}
-	pin->prop.label = kstrdup(prop->label, GFP_KERNEL);
-	if (!pin->prop.label) {
-		ret = -ENOMEM;
-		goto err;
-	}
+	pin->prop.board_label = kstrdup(prop->board_label, GFP_KERNEL);
+	pin->prop.panel_label = kstrdup(prop->panel_label, GFP_KERNEL);
+	pin->prop.package_label = kstrdup(prop->package_label, GFP_KERNEL);
 	if (WARN_ON(prop->type < DPLL_PIN_TYPE_MUX ||
 		    prop->type > DPLL_PIN_TYPE_MAX)) {
 		ret = -EINVAL;
@@ -556,7 +550,9 @@ dpll_pin_alloc(u64 clock_id, u8 pin_idx, struct module *module,
 err:
 	xa_destroy(&pin->dpll_refs);
 	xa_destroy(&pin->parent_refs);
-	kfree(pin->prop.label);
+	kfree(pin->prop.board_label);
+	kfree(pin->prop.panel_label);
+	kfree(pin->prop.package_label);
 	kfree(pin->rclk_dev_name);
 	kfree(pin);
 	return ERR_PTR(ret);
@@ -613,7 +609,9 @@ void dpll_pin_put(struct dpll_pin *pin)
 		xa_destroy(&pin->dpll_refs);
 		xa_destroy(&pin->parent_refs);
 		xa_erase(&dpll_pin_xa, pin->id);
-		kfree(pin->prop.label);
+		kfree(pin->prop.board_label);
+		kfree(pin->prop.panel_label);
+		kfree(pin->prop.package_label);
 		kfree(pin->prop.freq_supported);
 		kfree(pin->rclk_dev_name);
 		kfree(pin);

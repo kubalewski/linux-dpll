@@ -1792,7 +1792,7 @@ ice_dpll_init_info_direct_pins(struct ice_pf *pf,
 
 	for (i = 0; i < num_pins; i++) {
 		pins[i].idx = i;
-		pins[i].prop.label = ice_cgu_get_pin_name(hw, i, input);
+		pins[i].prop.board_label = ice_cgu_get_pin_name(hw, i, input);
 		pins[i].prop.type = ice_cgu_get_pin_type(hw, i, input);
 		if (input) {
 			ret = ice_aq_get_cgu_ref_prio(hw, de->dpll_idx, i,
@@ -1835,7 +1835,7 @@ static int ice_dpll_init_rclk_pin(struct ice_pf *pf)
 	struct ice_dpll_pin *pin = &pf->dplls.rclk;
 	struct device *dev = ice_pf_to_dev(pf);
 
-	pin->prop.label = dev_name(dev);
+	pin->prop.board_label = dev_name(dev);
 	pin->prop.type = DPLL_PIN_TYPE_SYNCE_ETH_PORT;
 	pin->prop.capabilities |= DPLL_PIN_CAPS_STATE_CAN_CHANGE;
 	pin->pf = pf;

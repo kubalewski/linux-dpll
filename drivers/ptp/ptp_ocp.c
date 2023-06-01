@@ -2296,7 +2296,7 @@ static void
 ptp_ocp_sma_fb_init(struct ptp_ocp *bp)
 {
 	struct dpll_pin_properties prop = {
-		.label = NULL,
+		.board_label = NULL,
 		.type = DPLL_PIN_TYPE_EXT,
 		.capabilities = DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE,
 		.freq_supported_num = ARRAY_SIZE(ptp_ocp_sma_freq),
@@ -2310,7 +2310,8 @@ ptp_ocp_sma_fb_init(struct ptp_ocp *bp)
 	for (i = 0; i < OCP_SMA_NUM; i++) {
 		bp->sma[i].default_fcn = i & 1;
 		bp->sma[i].dpll_prop = prop;
-		bp->sma[i].dpll_prop.label = bp->ptp_info.pin_config[i].name;
+		bp->sma[i].dpll_prop.board_label =
+			bp->ptp_info.pin_config[i].name;
 	}
 	bp->sma[0].mode = SMA_MODE_IN;
 	bp->sma[1].mode = SMA_MODE_IN;
@@ -2471,7 +2472,7 @@ static void
 ptp_ocp_art_sma_init(struct ptp_ocp *bp)
 {
 	struct dpll_pin_properties prop = {
-		.label = NULL,
+		.board_label = NULL,
 		.type = DPLL_PIN_TYPE_EXT,
 		.capabilities = 0,
 		.freq_supported_num = ARRAY_SIZE(ptp_ocp_sma_freq),
@@ -2496,7 +2497,8 @@ ptp_ocp_art_sma_init(struct ptp_ocp *bp)
 	for (i = 0; i < OCP_SMA_NUM; i++) {
 		/* If no SMA map, the pin functions and directions are fixed. */
 		bp->sma[i].dpll_prop = prop;
-		bp->sma[i].dpll_prop.label = bp->ptp_info.pin_config[i].name;
+		bp->sma[i].dpll_prop.board_label =
+			bp->ptp_info.pin_config[i].name;
 		if (!bp->art_sma) {
 			bp->sma[i].fixed_fcn = true;
 			bp->sma[i].fixed_dir = true;

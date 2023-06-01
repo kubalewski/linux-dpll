@@ -99,7 +99,9 @@ struct dpll_pin_frequency {
 	DPLL_PIN_FREQUENCY(DPLL_PIN_FREQUENCY_77_5_KHZ)
 
 struct dpll_pin_properties {
-	const char *label;
+	const char *board_label;
+	const char *panel_label;
+	const char *package_label;
 	enum dpll_pin_type type;
 	unsigned long capabilities;
 	u32 freq_supported_num;

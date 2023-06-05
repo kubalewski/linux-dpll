@@ -29,6 +29,7 @@ DEFINE_XARRAY_FLAGS(dpll_pin_xa, XA_FLAGS_ALLOC);
  * dpll_device_get_by_id - find dpll device by it's id
  * @id: id of searched dpll
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * dpll_device struct if found
  * * NULL otherwise
@@ -41,6 +42,19 @@ struct dpll_device *dpll_device_get_by_id(int id)
 	return NULL;
 }
 
+/**
+ * dpll_pin_registration_find - find a pin registration record
+ * @ref: reference between dpll and pin
+ * @ops: searched pin ops pointer
+ * @priv: searched pin priv pointer
+ *
+ * Search dpll's registered pins for given ops and priv data.
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return:
+ * * NULL - if pin was not found
+ * * pointer to `struct dpll_pin_registration` if found
+ */
 static struct dpll_pin_registration *
 dpll_pin_registration_find(struct dpll_pin_ref *ref,
 			   const struct dpll_pin_ops *ops, void *priv)
@@ -64,6 +78,7 @@ dpll_pin_registration_find(struct dpll_pin_ref *ref,
  * Allocate and create reference of a pin and enlist a registration
  * structure storing ops and priv pointers of a caller registant.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * 0 on success
  * * -ENOMEM on failed allocation
@@ -127,6 +142,7 @@ dpll_xa_ref_pin_add(struct xarray *xa_pins, struct dpll_pin *pin,
  * Decrement refcount of existing pin reference on given xarray.
  * If all registrations are lifted delete the reference and free its memory.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * 0 on success
  * * -EINVAL if reference to a pin was not found
@@ -167,6 +183,7 @@ static int dpll_xa_ref_pin_del(struct xarray *xa_pins, struct dpll_pin *pin,
  * Allocate and create reference of a dpll-pin ops or increase refcount
  * on existing dpll reference on given xarray.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * 0 on success
  * * -ENOMEM on failed allocation
@@ -229,6 +246,8 @@ dpll_xa_ref_dpll_add(struct xarray *xa_dplls, struct dpll_device *dpll,
  *
  * Decrement refcount of existing dpll reference on given xarray.
  * If all references are dropped, delete the reference and free its memory.
+ *
+ * Context: shall be called under a lock (dpll_lock)
  */
 static void
 dpll_xa_ref_dpll_del(struct xarray *xa_dplls, struct dpll_device *dpll,
@@ -262,6 +281,7 @@ dpll_xa_ref_dpll_del(struct xarray *xa_dplls, struct dpll_device *dpll,
  *
  * Search for dpll-pin ops reference struct of a given dpll on given xarray.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * pin reference struct pointer on success
  * * NULL - reference to a pin was not found
@@ -280,6 +300,13 @@ dpll_xa_ref_dpll_find(struct xarray *xa_refs, const struct dpll_device *dpll)
 	return NULL;
 }
 
+/**
+ * dpll_xa_ref_dpll_first - find first record of given xarray
+ * @xa_refs: xarray
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: first element on given xaaray
+ */
 struct dpll_pin_ref *dpll_xa_ref_dpll_first(struct xarray *xa_refs)
 {
 	struct dpll_pin_ref *ref;
@@ -299,9 +326,11 @@ struct dpll_pin_ref *dpll_xa_ref_dpll_first(struct xarray *xa_refs)
  * Allocates memory and initialize dpll device, hold its reference on global
  * xarray.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
- * * dpll_device struct pointer if succeeded
- * * ERR_PTR(X) - failed allocation
+ * * valid dpll_device struct pointer if succeeded
+ * * ERR_PTR(-ENOMEM) - failed memory allocation
+ * * ERR_PTR(X) - failed allocation on dpll's xa
  */
 static struct dpll_device *
 dpll_device_alloc(const u64 clock_id, u32 device_idx, struct module *module)
@@ -337,9 +366,11 @@ dpll_device_alloc(const u64 clock_id, u32 device_idx, struct module *module)
  * Get existing object of a dpll device, unique for given arguments.
  * Create new if doesn't exist yet.
  *
+ * Context: Acquires a lock (dpll_lock)
  * Return:
  * * valid dpll_device struct pointer if succeeded
- * * ERR_PTR of an error
+ * * ERR_PTR(-ENOMEM) - failed memory allocation
+ * * ERR_PTR(X) - failed allocation on dpll's xa
  */
 struct dpll_device *
 dpll_device_get(u64 clock_id, u32 device_idx, struct module *module)
@@ -369,6 +400,7 @@ EXPORT_SYMBOL_GPL(dpll_device_get);
  * dpll_device_put - decrease the refcount and free memory if possible
  * @dpll: dpll_device struct pointer
  *
+ * Context: Acquires a lock (dpll_lock)
  * Drop reference for a dpll device, if all references are gone, delete
  * dpll device object.
  */
@@ -412,9 +444,11 @@ dpll_device_registration_find(struct dpll_device *dpll,
  *
  * Make dpll device available for user space.
  *
+ * Context: Acquires a lock (dpll_lock)
  * Return:
  * * 0 on success
- * * -EINVAL on failure
+ * * -EINVAL on failure due to wrong arguments provided
+ * * -EEXIST if device was already registered
  */
 int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 			 const struct dpll_device_ops *ops, void *priv,
@@ -462,13 +496,14 @@ int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 EXPORT_SYMBOL_GPL(dpll_device_register);
 
 /**
- * dpll_device_unregister - deregister dpll device
+ * dpll_device_unregister - unregister dpll device
  * @dpll: registered dpll pointer
  * @ops: ops for a dpll device
  * @priv: pointer to private information of owner
  *
- * Deregister device, make it unavailable for userspace.
+ * Unregister device, make it unavailable for userspace.
  * Note: It does not free the memory
+ * Context: Acquires a lock (dpll_lock)
  */
 void dpll_device_unregister(struct dpll_device *dpll,
 			    const struct dpll_device_ops *ops, void *priv)
@@ -502,9 +537,11 @@ EXPORT_SYMBOL_GPL(dpll_device_unregister);
  * @module: reference to registering module
  * @prop: dpll pin properties
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
- * valid allocated dpll_pin struct pointer if succeeded
- * ERR_PTR of an error
+ * * valid allocated dpll_pin struct pointer if succeeded
+ * * ERR_PTR(-ENOMEM) - failed memory allocation
+ * * ERR_PTR(-EINVAL) - wrong pin type property value
  */
 static struct dpll_pin *
 dpll_pin_alloc(u64 clock_id, u8 pin_idx, struct module *module,
@@ -568,6 +605,7 @@ err:
  * Get existing object of a pin (unique for given arguments) or create new
  * if doesn't exist yet.
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return:
  * * valid allocated dpll_pin struct pointer if succeeded
  * * ERR_PTR of an error
@@ -600,6 +638,8 @@ EXPORT_SYMBOL_GPL(dpll_pin_get);
  * @dpll: dpll_device struct pointer
  *
  * Drop reference for a pin, if all references are gone, delete pin object.
+ *
+ * Context: shall be called under a lock (dpll_lock)
  */
 void dpll_pin_put(struct dpll_pin *pin)
 {
@@ -660,9 +700,10 @@ rclk_free:
  * @priv: pointer to private information of owner
  * @rclk_device: pointer to recovered clock device
  *
+ * Context: Acquires a lock (dpll_lock)
  * Return:
  * * 0 on success
- * * -EINVAL - missing dpll or pin
+ * * -EINVAL - missing pin ops
  * * -ENOMEM - failed to allocate memory
  */
 int
@@ -690,13 +731,14 @@ __dpll_pin_unregister(struct dpll_device *dpll, struct dpll_pin *pin,
 }
 
 /**
- * dpll_pin_unregister - deregister dpll pin from dpll device
+ * dpll_pin_unregister - unregister dpll pin from dpll device
  * @dpll: registered dpll pointer
  * @pin: pointer to a pin
  * @ops: ops for a dpll pin
  * @priv: pointer to private information of owner
  *
  * Note: It does not free the memory
+ * Context: Acquires a lock (dpll_lock)
  */
 void dpll_pin_unregister(struct dpll_device *dpll, struct dpll_pin *pin,
 			 const struct dpll_pin_ops *ops, void *priv)
@@ -721,6 +763,7 @@ EXPORT_SYMBOL_GPL(dpll_pin_unregister);
  * Register a pin with a parent pin, create references between them and
  * between newly registered pin and dplls connected with a parent pin.
  *
+ * Context: Acquires a lock (dpll_lock)
  * Return:
  * * 0 on success
  * * -EINVAL missing pin or parent
@@ -772,12 +815,13 @@ unlock:
 EXPORT_SYMBOL_GPL(dpll_pin_on_pin_register);
 
 /**
- * dpll_pin_on_pin_unregister - deregister dpll pin from a parent pin
+ * dpll_pin_on_pin_unregister - unregister dpll pin from a parent pin
  * @parent: pointer to a parent pin
  * @pin: pointer to a pin
  * @ops: ops for a dpll pin
  * @priv: pointer to private information of owner
  *
+ * Context: Acquires a lock (dpll_lock)
  * Note: It does not free the memory
  */
 void dpll_pin_on_pin_unregister(struct dpll_pin *parent, struct dpll_pin *pin,
@@ -797,6 +841,14 @@ void dpll_pin_on_pin_unregister(struct dpll_pin *parent, struct dpll_pin *pin,
 }
 EXPORT_SYMBOL_GPL(dpll_pin_on_pin_unregister);
 
+
+/**
+ * dpll_device_registration_first - get first registration of dpll device
+ * @dpll: pointer to a dpll
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: pointer to the first registration of a dpll
+ */
 static struct dpll_device_registration *
 dpll_device_registration_first(struct dpll_device *dpll)
 {
@@ -810,9 +862,10 @@ dpll_device_registration_first(struct dpll_device *dpll)
 
 /**
  * dpll_priv - get the dpll device private owner data
- * @dpll:      registered dpll pointer
+ * @dpll: registered dpll pointer
  *
- * Return: pointer to the data
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: pointer to the first registration priv data
  */
 void *dpll_priv(const struct dpll_device *dpll)
 {
@@ -822,6 +875,13 @@ void *dpll_priv(const struct dpll_device *dpll)
 	return reg->priv;
 }
 
+/**
+ * dpll_device_ops - get the dpll device ops pointer
+ * @dpll: registered dpll pointer
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: pointer to the first registration ops of the dpll
+ */
 const struct dpll_device_ops *dpll_device_ops(struct dpll_device *dpll)
 {
 	struct dpll_device_registration *reg;
@@ -830,6 +890,13 @@ const struct dpll_device_ops *dpll_device_ops(struct dpll_device *dpll)
 	return reg->ops;
 }
 
+/**
+ * dpll_pin_registration_first - get first registration of dpll pin ref
+ * @ref: pointer to a pin ref struct
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: pointer to the first registration of a dpll_pin_ref
+ */
 static struct dpll_pin_registration *
 dpll_pin_registration_first(struct dpll_pin_ref *ref)
 {
@@ -846,6 +913,7 @@ dpll_pin_registration_first(struct dpll_pin_ref *ref)
  * @dpll:      registered dpll pointer
  * @pin:       pointer to a pin
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return: pointer to the data
  */
 void *dpll_pin_on_dpll_priv(const struct dpll_device *dpll,
@@ -866,6 +934,7 @@ void *dpll_pin_on_dpll_priv(const struct dpll_device *dpll,
  * @parent: pointer to a parent pin
  * @pin: pointer to a pin
  *
+ * Context: shall be called under a lock (dpll_lock)
  * Return: pointer to the data
  */
 void *dpll_pin_on_pin_priv(const struct dpll_pin *parent,
@@ -881,6 +950,13 @@ void *dpll_pin_on_pin_priv(const struct dpll_pin *parent,
 	return reg->priv;
 }
 
+/**
+ * dpll_pin_ops - get the pin ops pointer
+ * @ref: dpll pin ref
+ *
+ * Context: shall be called under a lock (dpll_lock)
+ * Return: pointer to the first ops registered with the pin
+ */
 const struct dpll_pin_ops *dpll_pin_ops(struct dpll_pin_ref *ref)
 {
 	struct dpll_pin_registration *reg;
@@ -889,6 +965,13 @@ const struct dpll_pin_ops *dpll_pin_ops(struct dpll_pin_ref *ref)
 	return reg->ops;
 }
 
+/**
+ * dpll_init - initialize dpll subsystem
+ *
+ * Return:
+ * 0 - success
+ * negative - netlink init error
+ */
 static int __init dpll_init(void)
 {
 	int ret;

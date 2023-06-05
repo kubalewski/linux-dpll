@@ -15,7 +15,7 @@
 
 #include "dpll_core.h"
 
-DEFINE_MUTEX(dpll_xa_lock);
+DEFINE_MUTEX(dpll_lock);
 
 DEFINE_XARRAY_FLAGS(dpll_device_xa, XA_FLAGS_ALLOC);
 DEFINE_XARRAY_FLAGS(dpll_pin_xa, XA_FLAGS_ALLOC);
@@ -347,7 +347,7 @@ dpll_device_get(u64 clock_id, u32 device_idx, struct module *module)
 	struct dpll_device *dpll, *ret = NULL;
 	unsigned long index;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	xa_for_each(&dpll_device_xa, index, dpll) {
 		if (dpll->clock_id == clock_id &&
 		    dpll->device_idx == device_idx &&
@@ -359,7 +359,7 @@ dpll_device_get(u64 clock_id, u32 device_idx, struct module *module)
 	}
 	if (!ret)
 		ret = dpll_device_alloc(clock_id, device_idx, module);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 
 	return ret;
 }
@@ -376,7 +376,7 @@ void dpll_device_put(struct dpll_device *dpll)
 {
 	if (!dpll)
 		return;
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	if (refcount_dec_and_test(&dpll->refcount)) {
 		ASSERT_DPLL_NOT_REGISTERED(dpll);
 		WARN_ON_ONCE(!xa_empty(&dpll->pin_refs));
@@ -385,7 +385,7 @@ void dpll_device_put(struct dpll_device *dpll)
 		WARN_ON(!list_empty(&dpll->registration_list));
 		kfree(dpll);
 	}
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 EXPORT_SYMBOL_GPL(dpll_device_put);
 
@@ -428,16 +428,16 @@ int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 	if (WARN_ON(type < DPLL_TYPE_PPS || type > DPLL_TYPE_MAX))
 		return -EINVAL;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	reg = dpll_device_registration_find(dpll, ops, priv);
 	if (reg) {
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		return -EEXIST;
 	}
 
 	reg = kzalloc(sizeof(*reg), GFP_KERNEL);
 	if (!reg) {
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		return -EEXIST;
 	}
 	reg->ops = ops;
@@ -449,12 +449,12 @@ int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 	first_registration = list_empty(&dpll->registration_list);
 	list_add_tail(&reg->list, &dpll->registration_list);
 	if (!first_registration) {
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		return 0;
 	}
 
 	xa_set_mark(&dpll_device_xa, dpll->id, DPLL_REGISTERED);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 	dpll_device_create_ntf(dpll);
 
 	return 0;
@@ -475,23 +475,23 @@ void dpll_device_unregister(struct dpll_device *dpll,
 {
 	struct dpll_device_registration *reg;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	ASSERT_DPLL_REGISTERED(dpll);
 	dpll_device_delete_ntf(dpll);
 	reg = dpll_device_registration_find(dpll, ops, priv);
 	if (WARN_ON(!reg)) {
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		return;
 	}
 	list_del(&reg->list);
 	kfree(reg);
 
 	if (!list_empty(&dpll->registration_list)) {
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		return;
 	}
 	xa_clear_mark(&dpll_device_xa, dpll->id, DPLL_REGISTERED);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 EXPORT_SYMBOL_GPL(dpll_device_unregister);
 
@@ -673,9 +673,9 @@ dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 	const char *rclk_name = rclk_device ? dev_name(rclk_device) : NULL;
 	int ret;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	ret = __dpll_pin_register(dpll, pin, ops, priv, rclk_name);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 
 	return ret;
 }
@@ -704,9 +704,9 @@ void dpll_pin_unregister(struct dpll_device *dpll, struct dpll_pin *pin,
 	if (WARN_ON(xa_empty(&dpll->pin_refs)))
 		return;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	__dpll_pin_unregister(dpll, pin, ops, priv);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 EXPORT_SYMBOL_GPL(dpll_pin_unregister);
 
@@ -742,11 +742,11 @@ int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 		goto unlock;
 	refcount_inc(&pin->refcount);
 	xa_for_each(&parent->dpll_refs, i, ref) {
-		mutex_lock(&dpll_xa_lock);
+		mutex_lock(&dpll_lock);
 		ret = __dpll_pin_register(ref->dpll, pin, ops, priv,
 					  rclk_device ?
 					  dev_name(rclk_device) : NULL);
-		mutex_unlock(&dpll_xa_lock);
+		mutex_unlock(&dpll_lock);
 		if (ret) {
 			stop = i;
 			goto dpll_unregister;
@@ -759,9 +759,9 @@ int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 dpll_unregister:
 	xa_for_each(&parent->dpll_refs, i, ref) {
 		if (i < stop) {
-			mutex_lock(&dpll_xa_lock);
+			mutex_lock(&dpll_lock);
 			__dpll_pin_unregister(ref->dpll, pin, ops, priv);
-			mutex_unlock(&dpll_xa_lock);
+			mutex_unlock(&dpll_lock);
 		}
 	}
 	refcount_dec(&pin->refcount);
@@ -786,14 +786,14 @@ void dpll_pin_on_pin_unregister(struct dpll_pin *parent, struct dpll_pin *pin,
 	struct dpll_pin_ref *ref;
 	unsigned long i;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	dpll_pin_delete_ntf(pin);
 	dpll_xa_ref_pin_del(&pin->parent_refs, parent, ops, priv);
 	refcount_dec(&pin->refcount);
 	xa_for_each(&pin->dpll_refs, i, ref) {
 		__dpll_pin_unregister(ref->dpll, pin, ops, priv);
 	}
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 EXPORT_SYMBOL_GPL(dpll_pin_on_pin_unregister);
 
@@ -900,7 +900,7 @@ static int __init dpll_init(void)
 	return 0;
 
 error:
-	mutex_destroy(&dpll_xa_lock);
+	mutex_destroy(&dpll_lock);
 	return ret;
 }
 subsys_initcall(dpll_init);

@@ -1003,7 +1003,7 @@ int dpll_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 	if (!info->attrs[DPLL_A_ID])
 		return -EINVAL;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	id = nla_get_u32(info->attrs[DPLL_A_ID]);
 
 	dpll_id = dpll_device_get_by_id(id);
@@ -1012,21 +1012,21 @@ int dpll_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 	info->user_ptr[0] = dpll_id;
 	return 0;
 unlock:
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 	return -ENODEV;
 }
 
 void dpll_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		    struct genl_info *info)
 {
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 
 int
 dpll_lock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		     struct genl_info *info)
 {
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 
 	return 0;
 }
@@ -1035,19 +1035,19 @@ void
 dpll_unlock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		   struct genl_info *info)
 {
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 
 int dpll_lock_dumpit(struct netlink_callback *cb)
 {
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 
 	return 0;
 }
 
 int dpll_unlock_dumpit(struct netlink_callback *cb)
 {
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 
 	return 0;
 }
@@ -1057,7 +1057,7 @@ int dpll_pin_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 {
 	int ret;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	if (!info->attrs[DPLL_A_PIN_ID]) {
 		ret = -EINVAL;
 		goto unlock_dev;
@@ -1072,14 +1072,14 @@ int dpll_pin_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 	return 0;
 
 unlock_dev:
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 	return ret;
 }
 
 void dpll_pin_post_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 			struct genl_info *info)
 {
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 }
 
 static int
@@ -1131,9 +1131,9 @@ int dpll_device_change_ntf(struct dpll_device *dpll)
 	if (WARN_ON(!dpll))
 		return ret;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	ret = dpll_device_event_send(DPLL_CMD_DEVICE_CHANGE_NTF, dpll);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 
 	return ret;
 }
@@ -1196,9 +1196,9 @@ int dpll_pin_change_ntf(struct dpll_pin *pin)
 	if (WARN_ON(!pin))
 		return ret;
 
-	mutex_lock(&dpll_xa_lock);
+	mutex_lock(&dpll_lock);
 	ret = __dpll_pin_change_ntf(pin);
-	mutex_unlock(&dpll_xa_lock);
+	mutex_unlock(&dpll_lock);
 
 	return ret;
 }

@@ -531,67 +531,46 @@ static int
 dpll_pin_parent_set(struct dpll_pin *pin, struct nlattr *parent_nest,
 		    struct netlink_ext_ack *extack)
 {
-	bool state_present = false, prio_present = false;
-	bool parent_dpll = false, parent_pin = false;
-	u32 parent_idx, dpll_idx, prio;
+	struct nlattr *tb[DPLL_A_MAX + 1];
+	u32 ppin_idx, pdpll_idx, prio;
 	enum dpll_pin_state state;
 	struct dpll_pin_ref *ref;
 	struct dpll_device *dpll;
-	struct nlattr *a;
-	int rem, ret;
+	int ret;
 
-	nla_for_each_nested(a, parent_nest, rem) {
-		switch (nla_type(a)) {
-		case DPLL_A_ID:
-			dpll_idx = nla_get_u32(a);
-			parent_dpll = true;
-			break;
-		case DPLL_A_PIN_ID:
-			parent_idx = nla_get_u32(a);
-			parent_pin = true;
-			break;
-		case DPLL_A_PIN_STATE:
-			state = nla_get_u8(a);
-			state_present = true;
-			break;
-		case DPLL_A_PIN_PRIO:
-			prio = nla_get_u32(a);
-			prio_present = true;
-			break;
-		default:
-			break;
-		}
-	}
-	if (parent_pin && !state_present) {
-		NL_SET_ERR_MSG(extack, "pin state is missing");
+	nla_parse_nested(tb, DPLL_A_MAX, parent_nest,
+			 NULL, extack);
+	if ((tb[DPLL_A_ID] && tb[DPLL_A_PIN_ID]) ||
+	    !(tb[DPLL_A_ID] || tb[DPLL_A_PIN_ID])) {
+		NL_SET_ERR_MSG(extack, "one parent id expected");
 		return -EINVAL;
 	}
-	if (parent_dpll && !(state_present || prio_present)) {
-		NL_SET_ERR_MSG(extack, "both pin state and prio are missing");
-		return -EINVAL;
-	}
-	if (parent_pin) {
-		ret = dpll_pin_on_pin_state_set(pin, parent_idx, state, extack);
-		if (ret)
-			return ret;
-	} else if (parent_dpll) {
-		dpll = xa_load(&dpll_device_xa, dpll_idx);
+	if (tb[DPLL_A_ID]) {
+		pdpll_idx = nla_get_u32(tb[DPLL_A_ID]);
+		dpll = xa_load(&dpll_device_xa, pdpll_idx);
 		if (!dpll)
 			return -EINVAL;
 		ref = xa_load(&pin->dpll_refs, dpll->device_idx);
 		if (!ref)
 			return -EINVAL;
-		if (state_present) {
-
+		if (tb[DPLL_A_PIN_STATE]) {
+			state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
 			ret = dpll_pin_state_set(dpll, pin, state, extack);
 			if (ret)
 				return ret;
 		}
-		if (prio_present) {
+		if (tb[DPLL_A_PIN_PRIO]) {
+			prio = nla_get_u8(tb[DPLL_A_PIN_PRIO]);
 			ret = dpll_pin_prio_set(dpll, pin, prio, extack);
 			if (ret)
 				return ret;
 		}
+	} else if (tb[DPLL_A_PIN_ID]) {
+		ppin_idx = nla_get_u32(tb[DPLL_A_PIN_ID]);
+		state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
+		ret = dpll_pin_on_pin_state_set(pin, ppin_idx, state, extack);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
@@ -887,27 +866,19 @@ static int
 dpll_set_from_nlattr(struct dpll_device *dpll, struct genl_info *info)
 {
 	const struct dpll_device_ops *ops = dpll_device_ops(dpll);
-	struct nlattr *attr;
-	enum dpll_mode mode;
-	int rem, ret = 0;
+	struct nlattr *tb[DPLL_A_MAX + 1];
+	int ret = 0;
 
-	nla_for_each_attr(attr, genlmsg_data(info->genlhdr),
-			  genlmsg_len(info->genlhdr), rem) {
-		switch (nla_type(attr)) {
-		case DPLL_A_MODE:
-			mode = nla_get_u8(attr);
-
-			ret = ops->mode_set(dpll, dpll_priv(dpll), mode,
-					    info->extack);
-			if (ret)
-				return ret;
-			break;
-		default:
-			break;
-		}
+	nla_parse(tb, DPLL_A_MAX, genlmsg_data(info->genlhdr),
+		  genlmsg_len(info->genlhdr), NULL, info->extack);
+	if (tb[DPLL_A_MODE]) {
+		ret = ops->mode_set(dpll, dpll_priv(dpll),
+				    nla_get_u8(tb[DPLL_A_MODE]), info->extack);
+		if (ret)
+			return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 int dpll_nl_device_id_get_doit(struct sk_buff *skb, struct genl_info *info)

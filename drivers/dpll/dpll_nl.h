@@ -9,10 +9,10 @@
 #include <net/netlink.h>
 #include <net/genetlink.h>
 
-#include <linux/dpll.h>
+#include <uapi/linux/dpll.h>
 
 /* Common nested types */
-extern const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_RCLK_DEVICE + 1];
+extern const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_STATE + 1];
 
 int dpll_lock_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
 		   struct genl_info *info);

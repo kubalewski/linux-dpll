@@ -8,16 +8,15 @@
 
 #include "dpll_nl.h"
 
-#include <linux/dpll.h>
+#include <uapi/linux/dpll.h>
 
 /* Common nested types */
-const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_RCLK_DEVICE + 1] = {
+const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_STATE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
 	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_MAX(NLA_U8, 2),
 	[DPLL_A_PIN_PRIO] = { .type = NLA_U32, },
 	[DPLL_A_PIN_STATE] = NLA_POLICY_MAX(NLA_U8, 3),
 	[DPLL_A_PIN_ID] = { .type = NLA_U32, },
-	[DPLL_A_PIN_RCLK_DEVICE] = { .type = NLA_NUL_STRING, },
 };
 
 /* DPLL_CMD_DEVICE_ID_GET - do */

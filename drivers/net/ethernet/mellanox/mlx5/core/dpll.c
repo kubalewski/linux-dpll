@@ -343,7 +343,7 @@ static int mlx5_dpll_probe(struct auxiliary_device *adev,
 	}
 
 	err = dpll_pin_register(mdpll->dpll, mdpll->dpll_pin,
-				&mlx5_dpll_pins_ops, mdpll, NULL);
+				&mlx5_dpll_pins_ops, mdpll);
 	if (err)
 		goto err_put_dpll_pin;
 

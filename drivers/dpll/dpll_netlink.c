@@ -277,7 +277,7 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	ret = dpll_msg_add_pin_handle(msg, pin);
 	if (ret)
 		return ret;
-	if (nla_put_string(msg, DPLL_A_MODULE_NAME, pin->module->name))
+	if (nla_put_string(msg, DPLL_A_MODULE_NAME, module_name(pin->module)))
 		return -EMSGSIZE;
 	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(pin->clock_id),
 			  &pin->clock_id, 0))
@@ -355,7 +355,7 @@ dpll_device_get_one(struct dpll_device *dpll, struct sk_buff *msg,
 	ret = dpll_msg_add_dev_handle(msg, dpll);
 	if (ret)
 		return ret;
-	if (nla_put_string(msg, DPLL_A_MODULE_NAME, dpll->module->name))
+	if (nla_put_string(msg, DPLL_A_MODULE_NAME, module_name(dpll->module)))
 		return -EMSGSIZE;
 	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(dpll->clock_id),
 			  &dpll->clock_id, 0))
@@ -626,8 +626,9 @@ dpll_pin_find(u64 clock_id, struct nlattr *mod_name_attr,
 			continue;
 		prop = pin->prop;
 		cid_match = clock_id ? pin->clock_id == clock_id : true;
-		mod_match = mod_name_attr ?
-			!nla_strcmp(mod_name_attr, pin->module->name) : true;
+		mod_match = mod_name_attr && module_name(pin->module) ?
+			!nla_strcmp(mod_name_attr,
+				    module_name(pin->module)) : true;
 		type_match = type ? prop->type == type : true;
 		board_match = board_label && prop->board_label ?
 			!nla_strcmp(board_label, prop->board_label) : true;
@@ -804,8 +805,9 @@ dpll_device_find(u64 clock_id, struct nlattr *mod_name_attr,
 
 	xa_for_each_marked(&dpll_device_xa, i, dpll, DPLL_REGISTERED) {
 		cid_match = clock_id ? dpll->clock_id == clock_id : true;
-		mod_match = mod_name_attr ?
-			!nla_strcmp(mod_name_attr, dpll->module->name) : true;
+		mod_match = mod_name_attr && module_name(dpll->module) ?
+			!nla_strcmp(mod_name_attr,
+				    module_name(dpll->module)) : true;
 		type_match = type ? dpll->type == type : true;
 		if (cid_match && mod_match && type_match) {
 			if (dpll_match)

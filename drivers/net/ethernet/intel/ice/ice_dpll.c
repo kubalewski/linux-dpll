@@ -1234,8 +1234,7 @@ ice_dpll_register_pins(struct dpll_device *dpll, struct ice_dpll_pin *pins,
 	int ret, i;
 
 	for (i = 0; i < count; i++) {
-		ret = dpll_pin_register(dpll, pins[i].pin, ops,
-					&pins[i], NULL);
+		ret = dpll_pin_register(dpll, pins[i].pin, ops, &pins[i]);
 		if (ret)
 			goto unregister_pins;
 	}
@@ -1344,7 +1343,6 @@ ice_dpll_init_rclk_pins(struct ice_pf *pf, struct ice_dpll_pin *pin,
 			int start_idx, const struct dpll_pin_ops *ops)
 {
 	struct ice_vsi *vsi = ice_get_main_vsi(pf);
-	struct device *dev = ice_pf_to_dev(pf);
 	struct dpll_pin *parent;
 	int ret, i;
 
@@ -1359,7 +1357,7 @@ ice_dpll_init_rclk_pins(struct ice_pf *pf, struct ice_dpll_pin *pin,
 			goto unregister_pins;
 		}
 		ret = dpll_pin_on_pin_register(parent, pf->dplls.rclk.pin,
-					       ops, &pf->dplls.rclk, dev);
+					       ops, &pf->dplls.rclk);
 		if (ret)
 			goto unregister_pins;
 	}

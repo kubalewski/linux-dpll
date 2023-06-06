@@ -539,7 +539,7 @@ EXPORT_SYMBOL_GPL(dpll_device_unregister);
  * * ERR_PTR(-EINVAL) - wrong pin type property value
  */
 static struct dpll_pin *
-dpll_pin_alloc(u64 clock_id, u8 pin_idx, struct module *module,
+dpll_pin_alloc(u64 clock_id, u32 pin_idx, struct module *module,
 	       const struct dpll_pin_properties *prop)
 {
 	struct dpll_pin *pin;

@@ -4429,7 +4429,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			goto out_dpll;
 
 		err = dpll_pin_register(bp->dpll, bp->sma[i].dpll_pin, &dpll_pins_ops,
-					&bp->sma[i], NULL);
+					&bp->sma[i]);
 		if (err) {
 			dpll_pin_put(bp->sma[i].dpll_pin);
 			goto out_dpll;

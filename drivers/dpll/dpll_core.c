@@ -625,7 +625,6 @@ void dpll_pin_put(struct dpll_pin *pin)
 		xa_destroy(&pin->dpll_refs);
 		xa_destroy(&pin->parent_refs);
 		xa_erase(&dpll_pin_xa, pin->id);
-		kfree(pin->rclk_dev_name);
 		kfree(pin);
 	}
 }
@@ -633,22 +632,16 @@ EXPORT_SYMBOL_GPL(dpll_pin_put);
 
 static int
 __dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
-		    const struct dpll_pin_ops *ops, void *priv,
-		    const char *rclk_device_name)
+		    const struct dpll_pin_ops *ops, void *priv)
 {
 	int ret;
 
 	if (WARN_ON(!ops))
 		return -EINVAL;
 
-	if (rclk_device_name && !pin->rclk_dev_name) {
-		pin->rclk_dev_name = kstrdup(rclk_device_name, GFP_KERNEL);
-		if (!pin->rclk_dev_name)
-			return -ENOMEM;
-	}
 	ret = dpll_xa_ref_pin_add(&dpll->pin_refs, pin, ops, priv);
 	if (ret)
-		goto rclk_free;
+		return ret;
 	ret = dpll_xa_ref_dpll_add(&pin->dpll_refs, dpll, ops, priv);
 	if (ret)
 		goto ref_pin_del;
@@ -659,8 +652,6 @@ __dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 
 ref_pin_del:
 	dpll_xa_ref_pin_del(&dpll->pin_refs, pin, ops, priv);
-rclk_free:
-	kfree(pin->rclk_dev_name);
 	return ret;
 }
 
@@ -670,7 +661,6 @@ rclk_free:
  * @pin: pointer to a dpll pin
  * @ops: ops for a dpll pin ops
  * @priv: pointer to private information of owner
- * @rclk_device: pointer to recovered clock device
  *
  * Context: Acquires a lock (dpll_lock)
  * Return:
@@ -680,10 +670,8 @@ rclk_free:
  */
 int
 dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
-		  const struct dpll_pin_ops *ops, void *priv,
-		  struct device *rclk_device)
+		  const struct dpll_pin_ops *ops, void *priv)
 {
-	const char *rclk_name = rclk_device ? dev_name(rclk_device) : NULL;
 	int ret;
 
 	mutex_lock(&dpll_lock);
@@ -691,7 +679,7 @@ dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 		      dpll->clock_id == pin->clock_id)))
 		ret = -EFAULT;
 	else
-		ret = __dpll_pin_register(dpll, pin, ops, priv, rclk_name);
+		ret = __dpll_pin_register(dpll, pin, ops, priv);
 	mutex_unlock(&dpll_lock);
 
 	return ret;
@@ -734,7 +722,6 @@ EXPORT_SYMBOL_GPL(dpll_pin_unregister);
  * @pin: pointer to a pin
  * @ops: ops for a dpll pin
  * @priv: pointer to private information of owner
- * @rclk_device: pointer to recovered clock device
  *
  * Register a pin with a parent pin, create references between them and
  * between newly registered pin and dplls connected with a parent pin.
@@ -747,8 +734,7 @@ EXPORT_SYMBOL_GPL(dpll_pin_unregister);
  * * -EPERM if parent is not allowed
  */
 int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
-			     const struct dpll_pin_ops *ops, void *priv,
-			     struct device *rclk_device)
+			     const struct dpll_pin_ops *ops, void *priv)
 {
 	struct dpll_pin_ref *ref;
 	unsigned long i, stop;
@@ -762,9 +748,7 @@ int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 	refcount_inc(&pin->refcount);
 	xa_for_each(&parent->dpll_refs, i, ref) {
 		mutex_lock(&dpll_lock);
-		ret = __dpll_pin_register(ref->dpll, pin, ops, priv,
-					  rclk_device ?
-					  dev_name(rclk_device) : NULL);
+		ret = __dpll_pin_register(ref->dpll, pin, ops, priv);
 		mutex_unlock(&dpll_lock);
 		if (ret) {
 			stop = i;

@@ -210,8 +210,7 @@ struct dpll_pin
  * * -EBUSY - couldn't allocate id for a pin.
  */
 int dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
-		      const struct dpll_pin_ops *ops, void *priv,
-		      struct device *rclk_device);
+		      const struct dpll_pin_ops *ops, void *priv);
 
 /**
  * dpll_pin_unregister - deregister pin from a dpll device
@@ -253,8 +252,7 @@ void dpll_pin_put(struct dpll_pin *pin);
  * * -EEXIST - pin already registered with this parent pin,
  */
 int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
-			     const struct dpll_pin_ops *ops, void *priv,
-			     struct device *rclk_device);
+			     const struct dpll_pin_ops *ops, void *priv);
 
 /**
  * dpll_pin_on_pin_register - register a pin to a muxed-type pin

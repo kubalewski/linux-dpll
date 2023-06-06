@@ -299,10 +299,6 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	ret = dpll_msg_add_pin_freq(msg, pin, ref, extack, true);
 	if (ret && ret != -EOPNOTSUPP)
 		return ret;
-	if (pin->rclk_dev_name)
-		if (nla_put_string(msg, DPLL_A_PIN_RCLK_DEVICE,
-				   pin->rclk_dev_name))
-			return -EMSGSIZE;
 	return 0;
 }
 

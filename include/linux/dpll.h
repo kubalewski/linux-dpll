@@ -128,176 +128,37 @@ static inline int dpll_msg_add_pin_handle(struct sk_buff *msg, struct dpll_pin *
 
 #endif
 
-/**
- * dpll_device_get - find or create dpll_device object
- * @clock_id: a system unique number for a device
- * @dev_driver_id: index of dpll device on parent device
- * @module: register module
- *
- * Returns:
- * * pointer to initialized dpll - success
- * * NULL - memory allocation fail
- */
 struct dpll_device
 *dpll_device_get(u64 clock_id, u32 dev_driver_id, struct module *module);
 
-/**
- * dpll_device_put - caller drops reference to the device, free resources
- * @dpll: dpll device pointer
- *
- * If all dpll_device_get callers drops their reference, the dpll device
- * resources are freed.
- */
 void dpll_device_put(struct dpll_device *dpll);
 
-/**
- * dpll_device_register - register device, make it visible in the subsystem.
- * @dpll: reference previously allocated with dpll_device_get
- * @type: type of dpll
- * @ops: callbacks
- * @priv: private data of registerer
- *
- */
 int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 			 const struct dpll_device_ops *ops, void *priv);
 
-/**
- * dpll_device_unregister - deregister registered dpll
- * @dpll: pointer to dpll
- * @ops: ops for a dpll device
- * @priv: pointer to private information of owner
- *
- * Unregister the dpll from the subsystem, make it unavailable for netlink
- * API users.
- */
 void dpll_device_unregister(struct dpll_device *dpll,
 			    const struct dpll_device_ops *ops, void *priv);
 
-/**
- * dpll_pin_get - get reference or create new pin object
- * @clock_id: a system unique number of a device
- * @dev_driver_id: index of dpll device on parent device
- * @module: register module
- * @prop: constant properities of a pin, shall be not freed during pin's
- * lifetime
- *
- * Find existing pin with given @clock_id, @dev_driver_id and @module, or create
- * new and return its reference.
- *
- * Returns:
- * * pointer to initialized pin - success
- * * NULL - memory allocation fail
- */
 struct dpll_pin
 *dpll_pin_get(u64 clock_id, u32 dev_driver_id, struct module *module,
 	      const struct dpll_pin_properties *prop);
 
-/**
- * dpll_pin_register - register pin with a dpll device
- * @dpll: pointer to dpll object to register pin with
- * @pin: pointer to allocated pin object being registered with dpll
- * @ops: struct with pin ops callbacks
- * @priv: private data pointer passed when calling callback ops
- * @rclk_device: pointer to device struct if pin is used for recovery of a clock
- * from that device
- *
- * Register previously allocated pin object with a dpll device.
- *
- * Return:
- * * 0 - if pin was registered with a parent pin,
- * * -ENOMEM - failed to allocate memory,
- * * -EEXIST - pin already registered with this dpll,
- * * -EBUSY - couldn't allocate id for a pin.
- */
 int dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 		      const struct dpll_pin_ops *ops, void *priv);
 
-/**
- * dpll_pin_unregister - deregister pin from a dpll device
- * @dpll: pointer to dpll object to deregister pin from
- * @pin: pointer to allocated pin object being deregistered from dpll
- * @ops: ops for a dpll pin ops
- * @priv: pointer to private information of owner
- *
- * Deregister previously registered pin object from a dpll device.
- *
- */
 void dpll_pin_unregister(struct dpll_device *dpll, struct dpll_pin *pin,
 			 const struct dpll_pin_ops *ops, void *priv);
 
-/**
- * dpll_pin_put - drop reference to a pin acquired with dpll_pin_get
- * @pin: pointer to allocated pin
- *
- * Pins shall be deregistered from all dpll devices before putting them,
- * otherwise the memory won't be freed.
- */
 void dpll_pin_put(struct dpll_pin *pin);
 
-/**
- * dpll_pin_on_pin_register - register a pin to a muxed-type pin
- * @parent: parent pin pointer
- * @pin: pointer to allocated pin object being registered with a parent pin
- * @ops: struct with pin ops callbacks
- * @priv: private data pointer passed when calling callback ops
- * @rclk_device: pointer to device struct if pin is used for recovery of a clock
- * from that device
- *
- * In case of multiplexed pins, allows registring them under a single
- * parent pin.
- *
- * Return:
- * * 0 - if pin was registered with a parent pin,
- * * -ENOMEM - failed to allocate memory,
- * * -EEXIST - pin already registered with this parent pin,
- */
 int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 			     const struct dpll_pin_ops *ops, void *priv);
 
-/**
- * dpll_pin_on_pin_register - register a pin to a muxed-type pin
- * @parent: parent pin pointer
- * @pin: pointer to allocated pin object being registered with a parent pin
- * @ops: struct with pin ops callbacks
- * @priv: private data pointer passed when calling callback ops
- * @rclk_device: pointer to device struct if pin is used for recovery of a clock
- * from that device
- *
- * In case of multiplexed pins, allows registring them under a single
- * parent pin.
- *
- * Return:
- * * 0 - if pin was registered with a parent pin,
- * * -ENOMEM - failed to allocate memory,
- * * -EEXIST - pin already registered with this parent pin,
- */
 void dpll_pin_on_pin_unregister(struct dpll_pin *parent, struct dpll_pin *pin,
 				const struct dpll_pin_ops *ops, void *priv);
 
-/**
- * dpll_device_change_ntf - notify on dpll device change
- * @dpll: dpll device pointer
- *
- * Broadcast event to the netlink multicast registered listeners.
- *
- * Context: Takes and releases a dpll_xa_lock.
- * Return:
- * * 0 - success
- * * negative - error
- */
 int dpll_device_change_ntf(struct dpll_device *dpll);
 
-/**
- * dpll_device_change_ntf - notify on dpll device change
- * @dpll: dpll device pointer
- *
- * Broadcast event to the netlink multicast registered listeners.
- *
- * Context: Takes and releases a dpll_xa_lock.
- * Return:
- * * 0 - success
- * * negative - error
- */
 int dpll_pin_change_ntf(struct dpll_pin *pin);
 
 #endif

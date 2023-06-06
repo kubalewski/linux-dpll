@@ -156,12 +156,10 @@ void dpll_device_put(struct dpll_device *dpll);
  * @type: type of dpll
  * @ops: callbacks
  * @priv: private data of registerer
- * @owner: device struct of the owner
  *
  */
 int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
-			 const struct dpll_device_ops *ops, void *priv,
-			 struct device *owner);
+			 const struct dpll_device_ops *ops, void *priv);
 
 /**
  * dpll_device_unregister - deregister registered dpll
@@ -178,7 +176,7 @@ void dpll_device_unregister(struct dpll_device *dpll,
 /**
  * dpll_pin_get - get reference or create new pin object
  * @clock_id: a system unique number of a device
- * @@dev_driver_id: index of dpll device on parent device
+ * @dev_driver_id: index of dpll device on parent device
  * @module: register module
  * @pin_prop: constant properities of a pin
  *

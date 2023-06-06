@@ -21,12 +21,10 @@ struct dpll_device_registration {
 
 /**
  * struct dpll_device - structure for a DPLL device
- * @id:			unique id number for each device
- * @dev_driver_id:	id given by dev driver
+ * @id:			unique id number for each device given by kernel
+ * @device_idx:		id given by dev driver
  * @clock_id:		unique identifier (clock_id) of a dpll
  * @module:		module of creator
- * @dev:		struct device for this dpll device
- * @parent:		parent device
  * @ops:		operations this &dpll_device supports
  * @lock:		mutex to serialize operations
  * @type:		type of a dpll
@@ -40,7 +38,6 @@ struct dpll_device {
 	u32 device_idx;
 	u64 clock_id;
 	struct module *module;
-	struct device *parent;
 	enum dpll_type type;
 	struct xarray pin_refs;
 	unsigned long mode_supported_mask;
@@ -50,8 +47,8 @@ struct dpll_device {
 
 /**
  * struct dpll_pin - structure for a dpll pin
- * @idx:		unique idx given by alloc on global pin's XA
- * @dev_driver_id:	id given by dev driver
+ * @id:			unique id number for pin given by kernel
+ * @pin_idx:		index of a pin given by dev driver
  * @clock_id:		clock_id of creator
  * @module:		module of creator
  * @dpll_refs:		hold referencees to dplls that pin is registered with

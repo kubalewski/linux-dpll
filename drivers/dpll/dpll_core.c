@@ -440,7 +440,6 @@ dpll_device_registration_find(struct dpll_device *dpll,
  * @type: type of a dpll
  * @ops: ops for a dpll device
  * @priv: pointer to private information of owner
- * @owner: pointer to owner device
  *
  * Make dpll device available for user space.
  *
@@ -451,13 +450,12 @@ dpll_device_registration_find(struct dpll_device *dpll,
  * * -EEXIST if device was already registered
  */
 int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
-			 const struct dpll_device_ops *ops, void *priv,
-			 struct device *owner)
+			 const struct dpll_device_ops *ops, void *priv)
 {
 	struct dpll_device_registration *reg;
 	bool first_registration = false;
 
-	if (WARN_ON(!ops || !owner))
+	if (WARN_ON(!ops))
 		return -EINVAL;
 	if (WARN_ON(type < DPLL_TYPE_PPS || type > DPLL_TYPE_MAX))
 		return -EINVAL;
@@ -476,10 +474,7 @@ int dpll_device_register(struct dpll_device *dpll, enum dpll_type type,
 	}
 	reg->ops = ops;
 	reg->priv = priv;
-
-	dpll->parent = owner;
 	dpll->type = type;
-
 	first_registration = list_empty(&dpll->registration_list);
 	list_add_tail(&reg->list, &dpll->registration_list);
 	if (!first_registration) {

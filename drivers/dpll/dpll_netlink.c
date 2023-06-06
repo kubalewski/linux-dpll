@@ -163,17 +163,17 @@ dpll_msg_add_pin_freq(struct sk_buff *msg, const struct dpll_pin *pin,
 		return -EMSGSIZE;
 	if (!dump_freq_supported)
 		return 0;
-	for (fs = 0; fs < pin->prop.freq_supported_num; fs++) {
+	for (fs = 0; fs < pin->prop->freq_supported_num; fs++) {
 		nest = nla_nest_start(msg, DPLL_A_PIN_FREQUENCY_SUPPORTED);
 		if (!nest)
 			return -EMSGSIZE;
-		freq = pin->prop.freq_supported[fs].min;
+		freq = pin->prop->freq_supported[fs].min;
 		if (nla_put_64bit(msg, DPLL_A_PIN_FREQUENCY_MIN, sizeof(freq),
 				   &freq, 0)) {
 			nla_nest_cancel(msg, nest);
 			return -EMSGSIZE;
 		}
-		freq = pin->prop.freq_supported[fs].max;
+		freq = pin->prop->freq_supported[fs].max;
 		if (nla_put_64bit(msg, DPLL_A_PIN_FREQUENCY_MAX, sizeof(freq),
 				   &freq, 0)) {
 			nla_nest_cancel(msg, nest);
@@ -270,6 +270,7 @@ static int
 dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 			  struct dpll_pin_ref *ref, struct netlink_ext_ack *extack)
 {
+	const struct dpll_pin_properties *prop = pin->prop;
 	int ret;
 
 	ret = dpll_msg_add_pin_handle(msg, pin);
@@ -280,19 +281,19 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(pin->clock_id),
 			  &pin->clock_id, 0))
 		return -EMSGSIZE;
-	if (pin->prop.board_label &&
-	    nla_put_string(msg, DPLL_A_PIN_BOARD_LABEL, pin->prop.board_label))
+	if (prop->board_label &&
+	    nla_put_string(msg, DPLL_A_PIN_BOARD_LABEL, prop->board_label))
 		return -EMSGSIZE;
-	if (pin->prop.panel_label &&
-	    nla_put_string(msg, DPLL_A_PIN_PANEL_LABEL, pin->prop.panel_label))
+	if (prop->panel_label &&
+	    nla_put_string(msg, DPLL_A_PIN_PANEL_LABEL, prop->panel_label))
 		return -EMSGSIZE;
-	if (pin->prop.package_label &&
+	if (prop->package_label &&
 	    nla_put_string(msg, DPLL_A_PIN_PACKAGE_LABEL,
-			   pin->prop.package_label))
+			   prop->package_label))
 		return -EMSGSIZE;
-	if (nla_put_u8(msg, DPLL_A_PIN_TYPE, pin->prop.type))
+	if (nla_put_u8(msg, DPLL_A_PIN_TYPE, prop->type))
 		return -EMSGSIZE;
-	if (nla_put_u32(msg, DPLL_A_PIN_DPLL_CAPS, pin->prop.capabilities))
+	if (nla_put_u32(msg, DPLL_A_PIN_DPLL_CAPS, prop->capabilities))
 		return -EMSGSIZE;
 	ret = dpll_msg_add_pin_freq(msg, pin, ref, extack, true);
 	if (ret && ret != -EOPNOTSUPP)
@@ -385,9 +386,9 @@ static bool dpll_pin_is_freq_supported(struct dpll_pin *pin, u32 freq)
 {
 	int fs;
 
-	for (fs = 0; fs < pin->prop.freq_supported_num; fs++)
-		if (freq >=  pin->prop.freq_supported[fs].min &&
-		    freq <=  pin->prop.freq_supported[fs].max)
+	for (fs = 0; fs < pin->prop->freq_supported_num; fs++)
+		if (freq >=  pin->prop->freq_supported[fs].min &&
+		    freq <=  pin->prop->freq_supported[fs].max)
 			return true;
 	return false;
 }
@@ -429,7 +430,7 @@ dpll_pin_on_pin_state_set(struct dpll_pin *pin, u32 parent_idx,
 	struct dpll_pin *parent;
 	unsigned long i;
 
-	if (!(DPLL_PIN_CAPS_STATE_CAN_CHANGE & pin->prop.capabilities))
+	if (!(DPLL_PIN_CAPS_STATE_CAN_CHANGE & pin->prop->capabilities))
 		return -EOPNOTSUPP;
 	parent = xa_load(&dpll_pin_xa, parent_idx);
 	if (!parent)
@@ -462,7 +463,7 @@ dpll_pin_state_set(struct dpll_device *dpll, struct dpll_pin *pin,
 	const struct dpll_pin_ops *ops;
 	struct dpll_pin_ref *ref;
 
-	if (!(DPLL_PIN_CAPS_STATE_CAN_CHANGE & pin->prop.capabilities))
+	if (!(DPLL_PIN_CAPS_STATE_CAN_CHANGE & pin->prop->capabilities))
 		return -EOPNOTSUPP;
 	ref = xa_load(&pin->dpll_refs, dpll->device_idx);
 	if (!ref)
@@ -484,7 +485,7 @@ dpll_pin_prio_set(struct dpll_device *dpll, struct dpll_pin *pin,
 {
 	const struct dpll_pin_ops *ops;
 	struct dpll_pin_ref *ref;
-	if (!(DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE & pin->prop.capabilities))
+	if (!(DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE & pin->prop->capabilities))
 		return -EOPNOTSUPP;
 	ref = xa_load(&pin->dpll_refs, dpll->device_idx);
 	if (!ref)
@@ -508,7 +509,7 @@ dpll_pin_direction_set(struct dpll_pin *pin, struct nlattr *a,
 	struct dpll_pin_ref *ref;
 	unsigned long i;
 
-	if (!(DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE & pin->prop.capabilities))
+	if (!(DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE & pin->prop->capabilities))
 		return -EOPNOTSUPP;
 
 	xa_for_each(&pin->dpll_refs, i, ref) {
@@ -640,23 +641,25 @@ dpll_pin_find(u64 clock_id, struct nlattr *mod_name_attr,
 {
 	bool board_match, panel_match, package_match;
 	struct dpll_pin *pin_match = NULL, *pin;
+	const struct dpll_pin_properties *prop;
 	bool cid_match, mod_match, type_match;
 	unsigned long i;
 
 	xa_for_each(&dpll_pin_xa, i, pin) {
 		if (xa_empty(&pin->dpll_refs))
 			continue;
+		prop = pin->prop;
 		cid_match = clock_id ? pin->clock_id == clock_id : true;
 		mod_match = mod_name_attr ?
 			!nla_strcmp(mod_name_attr, pin->module->name) : true;
-		type_match = type ? pin->prop.type == type : true;
-		board_match = board_label && pin->prop.board_label ?
-			!nla_strcmp(board_label, pin->prop.board_label) : true;
-		panel_match = panel_label && pin->prop.panel_label ?
-			!nla_strcmp(panel_label, pin->prop.panel_label) : true;
-		package_match = package_label && pin->prop.package_label ?
+		type_match = type ? prop->type == type : true;
+		board_match = board_label && prop->board_label ?
+			!nla_strcmp(board_label, prop->board_label) : true;
+		panel_match = panel_label && prop->panel_label ?
+			!nla_strcmp(panel_label, prop->panel_label) : true;
+		package_match = package_label && prop->package_label ?
 			!nla_strcmp(package_label,
-				    pin->prop.package_label) : true;
+				    prop->package_label) : true;
 		if (cid_match && mod_match && type_match && board_match &&
 		    panel_match && package_match) {
 			if (pin_match)

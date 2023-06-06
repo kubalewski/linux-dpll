@@ -543,7 +543,7 @@ dpll_pin_alloc(u64 clock_id, u32 pin_idx, struct module *module,
 	       const struct dpll_pin_properties *prop)
 {
 	struct dpll_pin *pin;
-	int ret, fs_size;
+	int ret;
 
 	pin = kzalloc(sizeof(*pin), GFP_KERNEL);
 	if (!pin)
@@ -551,28 +551,13 @@ dpll_pin_alloc(u64 clock_id, u32 pin_idx, struct module *module,
 	pin->pin_idx = pin_idx;
 	pin->clock_id = clock_id;
 	pin->module = module;
-	refcount_set(&pin->refcount, 1);
-	pin->prop.board_label = kstrdup(prop->board_label, GFP_KERNEL);
-	pin->prop.panel_label = kstrdup(prop->panel_label, GFP_KERNEL);
-	pin->prop.package_label = kstrdup(prop->package_label, GFP_KERNEL);
 	if (WARN_ON(prop->type < DPLL_PIN_TYPE_MUX ||
 		    prop->type > DPLL_PIN_TYPE_MAX)) {
 		ret = -EINVAL;
 		goto err;
 	}
-	pin->prop.type = prop->type;
-	pin->prop.capabilities = prop->capabilities;
-	if (prop->freq_supported_num) {
-		fs_size = sizeof(*pin->prop.freq_supported) *
-			  prop->freq_supported_num;
-		pin->prop.freq_supported = kzalloc(fs_size, GFP_KERNEL);
-		if (!pin->prop.freq_supported) {
-			ret = -ENOMEM;
-			goto err;
-		}
-		memcpy(pin->prop.freq_supported, prop->freq_supported, fs_size);
-		pin->prop.freq_supported_num = prop->freq_supported_num;
-	}
+	pin->prop = prop;
+	refcount_set(&pin->refcount, 1);
 	xa_init_flags(&pin->dpll_refs, XA_FLAGS_ALLOC);
 	xa_init_flags(&pin->parent_refs, XA_FLAGS_ALLOC);
 	ret = xa_alloc(&dpll_pin_xa, &pin->id, pin, xa_limit_16b, GFP_KERNEL);
@@ -582,10 +567,6 @@ dpll_pin_alloc(u64 clock_id, u32 pin_idx, struct module *module,
 err:
 	xa_destroy(&pin->dpll_refs);
 	xa_destroy(&pin->parent_refs);
-	kfree(pin->prop.board_label);
-	kfree(pin->prop.panel_label);
-	kfree(pin->prop.package_label);
-	kfree(pin->rclk_dev_name);
 	kfree(pin);
 	return ERR_PTR(ret);
 }
@@ -644,10 +625,6 @@ void dpll_pin_put(struct dpll_pin *pin)
 		xa_destroy(&pin->dpll_refs);
 		xa_destroy(&pin->parent_refs);
 		xa_erase(&dpll_pin_xa, pin->id);
-		kfree(pin->prop.board_label);
-		kfree(pin->prop.panel_label);
-		kfree(pin->prop.package_label);
-		kfree(pin->prop.freq_supported);
 		kfree(pin->rclk_dev_name);
 		kfree(pin);
 	}
@@ -773,7 +750,7 @@ int dpll_pin_on_pin_register(struct dpll_pin *parent, struct dpll_pin *pin,
 	unsigned long i, stop;
 	int ret;
 
-	if (WARN_ON(parent->prop.type != DPLL_PIN_TYPE_MUX))
+	if (WARN_ON(parent->prop->type != DPLL_PIN_TYPE_MUX))
 		return -EINVAL;
 	ret = dpll_xa_ref_pin_add(&pin->parent_refs, parent, ops, priv);
 	if (ret)

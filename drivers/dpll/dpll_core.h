@@ -53,7 +53,7 @@ struct dpll_device {
  * @module:		module of creator
  * @dpll_refs:		hold referencees to dplls that pin is registered with
  * @pin_refs:		hold references to pins that pin is registered with
- * @prop:		properties given by registerer
+ * @prop:		pointer to pin properties given by registerer
  * @rclk_dev_name:	holds name of device when pin can recover clock from it
  * @refcount:		refcount
  **/
@@ -64,7 +64,7 @@ struct dpll_pin {
 	struct module *module;
 	struct xarray dpll_refs;
 	struct xarray parent_refs;
-	struct dpll_pin_properties prop;
+	const struct dpll_pin_properties *prop;
 	char *rclk_dev_name;
 	refcount_t refcount;
 };

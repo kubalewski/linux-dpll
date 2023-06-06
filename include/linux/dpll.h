@@ -178,10 +178,11 @@ void dpll_device_unregister(struct dpll_device *dpll,
  * @clock_id: a system unique number of a device
  * @dev_driver_id: index of dpll device on parent device
  * @module: register module
- * @pin_prop: constant properities of a pin
+ * @prop: constant properities of a pin, shall be not freed during pin's
+ * lifetime
  *
- * find existing pin with given clock_id, @dev_driver_id and module, or create new
- * and returen its reference.
+ * Find existing pin with given @clock_id, @dev_driver_id and @module, or create
+ * new and return its reference.
  *
  * Returns:
  * * pointer to initialized pin - success

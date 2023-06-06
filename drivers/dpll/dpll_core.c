@@ -843,11 +843,11 @@ dpll_device_registration_first(struct dpll_device *dpll)
  * Context: shall be called under a lock (dpll_lock)
  * Return: pointer to the first registration priv data
  */
-void *dpll_priv(const struct dpll_device *dpll)
+void *dpll_priv(struct dpll_device *dpll)
 {
 	struct dpll_device_registration *reg;
 
-	reg = dpll_device_registration_first((struct dpll_device *) dpll);
+	reg = dpll_device_registration_first(dpll);
 	return reg->priv;
 }
 
@@ -892,13 +892,13 @@ dpll_pin_registration_first(struct dpll_pin_ref *ref)
  * Context: shall be called under a lock (dpll_lock)
  * Return: pointer to the data
  */
-void *dpll_pin_on_dpll_priv(const struct dpll_device *dpll,
-			    const struct dpll_pin *pin)
+void *dpll_pin_on_dpll_priv(struct dpll_device *dpll,
+			    struct dpll_pin *pin)
 {
 	struct dpll_pin_registration *reg;
 	struct dpll_pin_ref *ref;
 
-	ref = xa_load((struct xarray *)&dpll->pin_refs, pin->pin_idx);
+	ref = xa_load(&dpll->pin_refs, pin->pin_idx);
 	if (!ref)
 		return NULL;
 	reg = dpll_pin_registration_first(ref);
@@ -913,13 +913,13 @@ void *dpll_pin_on_dpll_priv(const struct dpll_device *dpll,
  * Context: shall be called under a lock (dpll_lock)
  * Return: pointer to the data
  */
-void *dpll_pin_on_pin_priv(const struct dpll_pin *parent,
-			   const struct dpll_pin *pin)
+void *dpll_pin_on_pin_priv(struct dpll_pin *parent,
+			   struct dpll_pin *pin)
 {
 	struct dpll_pin_registration *reg;
 	struct dpll_pin_ref *ref;
 
-	ref = xa_load((struct xarray *)&pin->parent_refs, parent->pin_idx);
+	ref = xa_load(&pin->parent_refs, parent->pin_idx);
 	if (!ref)
 		return NULL;
 	reg = dpll_pin_registration_first(ref);

@@ -84,12 +84,12 @@ dpll_msg_add_temp(struct sk_buff *msg, struct dpll_device *dpll,
 }
 
 static int
-dpll_msg_add_pin_prio(struct sk_buff *msg, const struct dpll_pin *pin,
+dpll_msg_add_pin_prio(struct sk_buff *msg, struct dpll_pin *pin,
 		      struct dpll_pin_ref *ref,
 		      struct netlink_ext_ack *extack)
 {
 	const struct dpll_pin_ops *ops = dpll_pin_ops(ref);
-	const struct dpll_device *dpll = ref->dpll;
+	struct dpll_device *dpll = ref->dpll;
 	u32 prio;
 
 	if (!ops->prio_get)
@@ -104,12 +104,12 @@ dpll_msg_add_pin_prio(struct sk_buff *msg, const struct dpll_pin *pin,
 }
 
 static int
-dpll_msg_add_pin_on_dpll_state(struct sk_buff *msg, const struct dpll_pin *pin,
+dpll_msg_add_pin_on_dpll_state(struct sk_buff *msg, struct dpll_pin *pin,
 			       struct dpll_pin_ref *ref,
 			       struct netlink_ext_ack *extack)
 {
 	const struct dpll_pin_ops *ops = dpll_pin_ops(ref);
-	const struct dpll_device *dpll = ref->dpll;
+	struct dpll_device *dpll = ref->dpll;
 	enum dpll_pin_state state;
 
 	if (!ops->state_on_dpll_get)
@@ -124,12 +124,12 @@ dpll_msg_add_pin_on_dpll_state(struct sk_buff *msg, const struct dpll_pin *pin,
 }
 
 static int
-dpll_msg_add_pin_direction(struct sk_buff *msg, const struct dpll_pin *pin,
+dpll_msg_add_pin_direction(struct sk_buff *msg, struct dpll_pin *pin,
 			   struct dpll_pin_ref *ref,
 			   struct netlink_ext_ack *extack)
 {
 	const struct dpll_pin_ops *ops = dpll_pin_ops(ref);
-	const struct dpll_device *dpll = ref->dpll;
+	struct dpll_device *dpll = ref->dpll;
 	enum dpll_pin_direction direction;
 
 	if (!ops->direction_get)
@@ -144,12 +144,12 @@ dpll_msg_add_pin_direction(struct sk_buff *msg, const struct dpll_pin *pin,
 }
 
 static int
-dpll_msg_add_pin_freq(struct sk_buff *msg, const struct dpll_pin *pin,
+dpll_msg_add_pin_freq(struct sk_buff *msg, struct dpll_pin *pin,
 		      struct dpll_pin_ref *ref, struct netlink_ext_ack *extack,
 		      bool dump_freq_supported)
 {
 	const struct dpll_pin_ops *ops = dpll_pin_ops(ref);
-	const struct dpll_device *dpll = ref->dpll;
+	struct dpll_device *dpll = ref->dpll;
 	struct nlattr *nest;
 	u64 freq;
 	int fs;

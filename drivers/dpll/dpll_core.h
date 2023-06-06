@@ -91,11 +91,9 @@ struct dpll_pin_ref {
 	refcount_t refcount;
 };
 
-void *dpll_priv(const struct dpll_device *dpll);
-void *dpll_pin_on_dpll_priv(const struct dpll_device *dpll,
-			    const struct dpll_pin *pin);
-void *dpll_pin_on_pin_priv(const struct dpll_pin *parent,
-			   const struct dpll_pin *pin);
+void *dpll_priv(struct dpll_device *dpll);
+void *dpll_pin_on_dpll_priv(struct dpll_device *dpll, struct dpll_pin *pin);
+void *dpll_pin_on_pin_priv(struct dpll_pin *parent, struct dpll_pin *pin);
 
 const struct dpll_device_ops *dpll_device_ops(struct dpll_device *dpll);
 struct dpll_device *dpll_device_get_by_id(int id);

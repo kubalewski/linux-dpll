@@ -23,7 +23,7 @@ int dpll_device_create_ntf(struct dpll_device *dpll);
 int dpll_device_delete_ntf(struct dpll_device *dpll);
 
 /**
- * dpll_pin_delete_ntf - notify that the pin has been deleted
+ * dpll_pin_create_ntf - notify that the pin has been created
  * @pin: registered pin pointer
  *
  * Context: caller shall hold dpll_xa_lock.

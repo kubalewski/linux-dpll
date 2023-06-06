@@ -137,7 +137,9 @@ dpll_xa_ref_pin_add(struct xarray *xa_pins, struct dpll_pin *pin,
 /**
  * dpll_xa_ref_pin_del - remove reference of a pin from xarray
  * @xa_pins: dpll_pin_ref xarray holding pins
- * @pin: pointer to a pin
+ * @pin: pointer to a pin being removed
+ * @ops: pointer to ops of pin being removed
+ * @priv: pointer to private data of registerer who invoked pin removal
  *
  * Decrement refcount of existing pin reference on given xarray.
  * If all registrations are lifted delete the reference and free its memory.
@@ -243,6 +245,8 @@ dpll_xa_ref_dpll_add(struct xarray *xa_dplls, struct dpll_device *dpll,
  * dpll_xa_ref_dpll_del - remove reference of a dpll from xarray
  * @xa_dplls: dpll_pin_ref xarray holding dplls
  * @dpll: pointer to a dpll to remove
+ * @ops: pointer to ops of dpll being removed
+ * @priv: pointer to private data of registerer who invoked dpll removal
  *
  * Decrement refcount of existing dpll reference on given xarray.
  * If all references are dropped, delete the reference and free its memory.
@@ -276,8 +280,8 @@ dpll_xa_ref_dpll_del(struct xarray *xa_dplls, struct dpll_device *dpll,
 
 /**
  * dpll_xa_ref_dpll_find - find dpll reference on xarray
- * @xa_dplls: dpll_pin_ref xarray holding dplls
- * @dpll: pointer to a dpll
+ * @xa_refs: dpll_pin_ref xarray holding dpll references
+ * @dpll: pointer to a dpll being searched
  *
  * Search for dpll-pin ops reference struct of a given dpll on given xarray.
  *
@@ -611,7 +615,7 @@ EXPORT_SYMBOL_GPL(dpll_pin_get);
 
 /**
  * dpll_pin_put - decrease the refcount and free memory if possible
- * @dpll: dpll_device struct pointer
+ * @pin: pointer to a pin to be put
  *
  * Drop reference for a pin, if all references are gone, delete pin object.
  *

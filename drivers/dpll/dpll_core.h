@@ -21,18 +21,16 @@ struct dpll_device_registration {
 };
 
 /**
- * struct dpll_device - structure for a DPLL device
+ * struct dpll_device - stores DPLL device internal data
  * @id:			unique id number for each device given by kernel
  * @device_idx:		id given by dev driver
  * @clock_id:		unique identifier (clock_id) of a dpll
  * @module:		module of creator
- * @ops:		operations this &dpll_device supports
- * @lock:		mutex to serialize operations
  * @type:		type of a dpll
- * @pins:		list of pointers to pins registered with this dpll
+ * @pin_refs:		stores pins registered within a dpll
  * @mode_supported_mask: mask of supported modes
  * @refcount:		refcount
- * @priv:		pointer to private information of owner
+ * @registration_list:	list of registered ops and priv data of dpll owners
  **/
 struct dpll_device {
 	u32 id;
@@ -52,8 +50,8 @@ struct dpll_device {
  * @pin_idx:		index of a pin given by dev driver
  * @clock_id:		clock_id of creator
  * @module:		module of creator
- * @dpll_refs:		hold referencees to dplls that pin is registered with
- * @pin_refs:		hold references to pins that pin is registered with
+ * @dpll_refs:		hold referencees to dplls pin was registered with
+ * @parent_refs:	hold references to parent pins pin was registered with
  * @prop:		pointer to pin properties given by registerer
  * @rclk_dev_name:	holds name of device when pin can recover clock from it
  * @refcount:		refcount
@@ -80,7 +78,7 @@ struct dpll_pin_registration {
  * struct dpll_pin_ref - structure for referencing either dpll or pins
  * @dpll:		pointer to a dpll
  * @pin:		pointer to a pin
- * @registration_list	list of ops and priv data registered with the ref
+ * @registration_list:	list of ops and priv data registered with the ref
  * @refcount:		refcount
  **/
 struct dpll_pin_ref {

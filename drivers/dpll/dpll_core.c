@@ -687,7 +687,11 @@ dpll_pin_register(struct dpll_device *dpll, struct dpll_pin *pin,
 	int ret;
 
 	mutex_lock(&dpll_lock);
-	ret = __dpll_pin_register(dpll, pin, ops, priv, rclk_name);
+	if (WARN_ON(!(dpll->module == pin->module &&
+		      dpll->clock_id == pin->clock_id)))
+		ret = -EFAULT;
+	else
+		ret = __dpll_pin_register(dpll, pin, ops, priv, rclk_name);
 	mutex_unlock(&dpll_lock);
 
 	return ret;

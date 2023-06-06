@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- *  Copyright (c) 2021 Meta Platforms, Inc. and affiliates
+ *  Copyright (c) 2023 Meta Platforms, Inc. and affiliates
+ *  Copyright (c) 2023 Intel and affiliates
  */
 
 #ifndef __DPLL_CORE_H__

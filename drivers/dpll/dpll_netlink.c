@@ -2,7 +2,8 @@
 /*
  * Generic netlink for DPLL management framework
  *
- * Copyright (c) 2021 Meta Platforms, Inc. and affiliates
+ *  Copyright (c) 2023 Meta Platforms, Inc. and affiliates
+ *  Copyright (c) 2023 Intel and affiliates
  *
  */
 #include <linux/module.h>

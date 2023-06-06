@@ -1465,7 +1465,6 @@ static int
 ice_dpll_init_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu,
 		   enum dpll_type type)
 {
-	struct device *dev = ice_pf_to_dev(pf);
 	u64 clock_id = pf->dplls.clock_id;
 	int ret;
 
@@ -1478,8 +1477,7 @@ ice_dpll_init_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu,
 	}
 	d->pf = pf;
 	if (cgu) {
-		ret = dpll_device_register(d->dpll, type, &ice_dpll_ops,
-					   d, dev);
+		ret = dpll_device_register(d->dpll, type, &ice_dpll_ops, d);
 		if (ret) {
 			dpll_device_put(d->dpll);
 			return ret;

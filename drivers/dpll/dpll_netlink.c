@@ -214,10 +214,9 @@ dpll_msg_add_pin_parents(struct sk_buff *msg, struct dpll_pin *pin,
 		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT);
 		if (!nest)
 			return -EMSGSIZE;
-		if (nla_put_u32(msg, DPLL_A_PIN_ID, ppin->id)) {
-			ret = -EMSGSIZE;
+		ret = dpll_msg_add_pin_handle(msg, ppin);
+		if (ret)
 			goto nest_cancel;
-		}
 		if (nla_put_u8(msg, DPLL_A_PIN_STATE, state)) {
 			ret = -EMSGSIZE;
 			goto nest_cancel;
@@ -274,8 +273,9 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 	const struct dpll_pin_properties *prop = pin->prop;
 	int ret;
 
-	if (nla_put_u32(msg, DPLL_A_PIN_ID, pin->id))
-		return -EMSGSIZE;
+	ret = dpll_msg_add_pin_handle(msg, pin);
+	if (ret)
+		return ret;
 	if (nla_put_string(msg, DPLL_A_MODULE_NAME, module_name(pin->module)))
 		return -EMSGSIZE;
 	if (nla_put_64bit(msg, DPLL_A_CLOCK_ID, sizeof(pin->clock_id),
@@ -300,6 +300,20 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 		return ret;
 	return 0;
 }
+
+size_t dpll_msg_pin_handle_size(struct dpll_pin *pin)
+{
+	return nla_total_size(4); /* DPLL_A_PIN_ID */
+}
+EXPORT_SYMBOL_GPL(dpll_msg_pin_handle_size);
+
+int dpll_msg_add_pin_handle(struct sk_buff *msg, struct dpll_pin *pin)
+{
+	if (nla_put_u32(msg, DPLL_A_PIN_ID, pin->id))
+		return -EMSGSIZE;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(dpll_msg_add_pin_handle);
 
 static int
 __dpll_cmd_pin_dump_one(struct sk_buff *msg, struct dpll_pin *pin,
@@ -690,9 +704,7 @@ dpll_pin_find_from_nlattr(struct genl_info *info, struct sk_buff *skb)
 			    panel_label_attr, package_label_attr);
 	if (!pin)
 		return -EINVAL;
-	if (nla_put_u32(skb, DPLL_A_PIN_ID, pin->id))
-		return -EMSGSIZE;
-	return 0;
+	return dpll_msg_add_pin_handle(skb, pin);
 }
 
 int dpll_nl_pin_id_get_doit(struct sk_buff *skb, struct genl_info *info)

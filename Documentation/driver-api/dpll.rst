@@ -63,16 +63,19 @@ for the states the user can request for a dpll device.
 
 In manual mode (``DPLL_MODE_MANUAL``) the user can request or receive
 one of following pin states:
+
 - ``DPLL_PIN_STATE_CONNECTED`` - the pin is used to drive dpll device
 - ``DPLL_PIN_STATE_DISCONNECTED`` - the pin is not used to drive dpll
   device
 
 In automatic mode (``DPLL_MODE_AUTOMATIC``) the user can request or
 receive one of following pin states:
+
 - ``DPLL_PIN_STATE_SELECTABLE`` - the pin shall be considered as valid
   input for automatic selection algorithm
 - ``DPLL_PIN_STATE_DISCONNECTED`` - the pin shall be not considered as
   a valid input for automatic selection algorithm
+
 In automatic mode (``DPLL_MODE_AUTOMATIC``) the user can only receive
 pin state ``DPLL_PIN_STATE_CONNECTED`` once automatic selection
 algorithm locks a dpll device with one of the inputs.
@@ -85,6 +88,7 @@ Shared pins
 
 A single pin object can be attached to multiple dpll devices.
 Then there are two groups of configuration knobs:
+
 1) Set on a pin - the configuration affects all dpll devices pin is
    registered to (i.e. ``DPLL_A_PIN_FREQUENCY``),
 2) Set on a pin-dpll tuple - the configuration affects only selected
@@ -103,31 +107,32 @@ with.
 If a pin was registered with multiple parent pins, they behave like a
 multiple output multiplexer. In this case output of a
 ``DPLL_CMD_PIN_GET`` would contain multiple pin-parent nested
-attributes with current state related to each parent, like:
+attributes with current state related to each parent, like::
 
-``'pin': [{
- {'clock-id': 282574471561216,
-  'module-name': 'ice',
-  'pin-dpll-caps': 4,
-  'pin-id': 13,
-  'pin-parent': [{'pin-id': 2, 'pin-state': 'connected'},
-                 {'pin-id': 3, 'pin-state': 'disconnected'},
-                 {'id': 0, 'pin-direction': 'input'},
-                 {'id': 1, 'pin-direction': 'input'}],
-  'pin-type': 'synce-eth-port'}
-}]``
+  'pin': [{
+   {'clock-id': 282574471561216,
+    'module-name': 'ice',
+    'pin-dpll-caps': 4,
+    'pin-id': 13,
+    'pin-parent': [{'pin-id': 2, 'pin-state': 'connected'},
+                   {'pin-id': 3, 'pin-state': 'disconnected'},
+                   {'id': 0, 'pin-direction': 'input'},
+                   {'id': 1, 'pin-direction': 'input'}],
+    'pin-type': 'synce-eth-port'}
+  }]
 
 Only one child pin can provide its signal to the parent MUX-type pin at
 a time, the selection is done by requesting change of a child pin state
 on desired parent, with the use of ``DPLL_A_PIN_PARENT`` nested
 attribute. Example of netlink `set state on parent pin` message format:
 
-  =====================  =============================================
+  ====================== =============================================
   ``DPLL_A_PIN_ID``      child pin id
   ``DPLL_A_PIN_PARENT``  nested attribute for requesting configuration
                          related to parent pin
     ``DPLL_A_PIN_ID``    parent pin id
     ``DPLL_A_PIN_STATE`` requested pin state on parent
+  ====================== =============================================
 
 Pin priority
 ============
@@ -149,6 +154,7 @@ device. Example of netlink `set priority on parent pin` message format:
                          related to parent pin
     ``DPLL_A_ID``        parent dpll id
     ``DPLL_A_PIN_PRIO``  requested pin prio on parent dpll
+  =====================  =============================================
 
 Child pin of MUX-type is not capable of automatic input pin selection,
 in order to configure a input of a MUX-type pin, the user needs to
@@ -254,6 +260,7 @@ prefix and suffix according to attribute purpose:
       ``DPLL_A_PIN_STATE``             attr requested state of pin on
                                        the dpll device or on the parent
                                        pin
+  ==================================== =================================
 
 Netlink dump requests
 =====================
@@ -303,6 +310,7 @@ Values for ``DPLL_A_LOCK_STATUS`` attribute:
                                      acquired
   ``DPLL_LOCK_STATUS_HOLDOVER``      dpll device lost a lock, using its
                                      frequency holdover capabilities
+  ================================== ===================================
 
 Values for ``DPLL_A_MODE`` attribute:
 
@@ -316,12 +324,14 @@ Values for ``DPLL_A_MODE`` attribute:
   ``DPLL_MODE_HOLDOVER``  force holdover mode of dpll
   ``DPLL_MODE_FREERUN``   dpll device is driven by supplied system clock
                           without holdover capabilities
+  ======================= ==============================================
 
 Values for ``DPLL_A_TYPE`` attribute:
 
   ================= ===================================================
   ``DPLL_TYPE_PPS`` dpll device used to provide pulse-per-second output
   ``DPLL_TYPE_EEC`` dpll device used to drive ethernet equipment clock
+  ================= ===================================================
 
 Pin level configuration pre-defined enums
 =========================================
@@ -334,6 +344,7 @@ Values for ``DPLL_A_PIN_STATE`` attribute:
   ``DPLL_PIN_STATE_DISCONNECTED`` Pin disconnected from a dpll device or
                                   from a parent pin
   ``DPLL_PIN_STATE_SELECTABLE``   Pin enabled for automatic selection
+  =============================== ======================================
 
 Values for ``DPLL_A_PIN_DIRECTION`` attribute:
 
@@ -342,6 +353,7 @@ Values for ``DPLL_A_PIN_DIRECTION`` attribute:
                                 device
   ``DPLL_PIN_DIRECTION_OUTPUT`` used to output the signal from a dpll
                                 device
+  ============================= ====================================
 
 Values for ``DPLL_A_PIN_TYPE`` attributes:
 
@@ -353,6 +365,7 @@ Values for ``DPLL_A_PIN_TYPE`` attributes:
   ``DPLL_PIN_TYPE_INT_OSCILLATOR`` Internal Oscillator (i.e. Holdover
                                    with Atomic Clock as an input)
   ``DPLL_PIN_TYPE_GNSS``           GNSS 1PPS input
+  ================================ =====================================
 
 Values for ``DPLL_A_PIN_DPLL_CAPS`` attributes:
 
@@ -363,6 +376,7 @@ Values for ``DPLL_A_PIN_DPLL_CAPS`` attributes:
                                          can change
   ``DPLL_PIN_CAPS_STATE_CAN_CHANGE``     Bit present if state of pin can
                                          change
+  ====================================== ===============================
 
 Notifications
 =============
@@ -381,6 +395,7 @@ Notifications messages:
   ``DPLL_CMD_PIN_CREATE_NTF``    dpll pin was created
   ``DPLL_CMD_PIN_DELETE_NTF``    dpll pin was deleted
   ``DPLL_CMD_PIN_CHANGE_NTF``    dpll pin has changed
+  ============================== =====================================
 
 Events format is the same as for the corresponding get command.
 Format of ``DPLL_CMD_DEVICE_`` events is the same as response of
@@ -413,6 +428,7 @@ increases. Also dpll_pin_put() works similarly to dpll_device_put().
 A pin can be registered with parent dpll device or parent pin, depending
 on hardware needs. Each registration requires registerer to provide set
 of pin callbacks, and private data pointer for calling them:
+
 - dpll_pin_register() - register pin with a dpll device,
 - dpll_pin_on_pin_register() - register pin with another MUX type pin.
 
@@ -422,6 +438,7 @@ Notifications about registering/deregistering pins are also invoked by
 the subsystem.
 Notifications about status changes either of dpll device or a pin are
 invoked in two ways:
+
 - after successful change was requested on dpll subsystem, the subsystem
   calls corresponding notification,
 - requested by device driver with dpll_device_change_ntf() or
@@ -431,10 +448,12 @@ The device driver using dpll interface is not required to implement all
 the callback operation. Neverthelessi, there are few required to be
 implemented.
 Required dpll device level callback operations:
+
 - ``.mode_get``,
 - ``.lock_status_get``.
 
 Required pin level callback operations:
+
 - ``.state_get`` (pins registered with dpll device),
 - ``.state_on_pin_get`` (pins registered with parent pin),
 - ``.direction_get``.
@@ -451,8 +470,8 @@ inputs.
 In such scenario, dpll device input signal shall be also configurable
 to drive dpll with signal recovered from the PHY netdevice.
 This is done by exposing a pin to the netdevice - attaching pin to the
-netdevice itself with:
-netdev_dpll_pin_set(struct net_device *dev, struct dpll_pin *dpll_pin);
+netdevice itself with
+``netdev_dpll_pin_set(struct net_device *dev, struct dpll_pin *dpll_pin)``.
 Exposed pin id handle ``DPLL_A_PIN_ID`` is then identifiable by the user
 as it is attached to rtnetlink respond to get ``RTM_NEWLINK`` command in
 nested attribute ``IFLA_DPLL_PIN``.

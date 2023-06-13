@@ -182,11 +182,14 @@ prefix and suffix according to attribute purpose:
 
   ==================================== =================================
   ``DPLL_CMD_DEVICE_ID_GET``           command to get device ID
-    ``DPLL_A_MODULE_NAME``             attr module name of registerer
+  ``DPLL_A_MODULE_NAME``               attr module name of registerer
     ``DPLL_A_CLOCK_ID``                attr Unique Clock Identifier
                                        (EUI-64), as defined by the
                                        IEEE 1588 standard
     ``DPLL_A_TYPE``                    attr type of dpll device
+  ==================================== =================================
+
+  ==================================== =================================
   ``DPLL_CMD_DEVICE_GET``              command to get device info or
                                        dump list of available devices
     ``DPLL_A_ID``                      attr unique dpll device ID
@@ -199,9 +202,15 @@ prefix and suffix according to attribute purpose:
     ``DPLL_A_LOCK_STATUS``             attr dpll device lock status
     ``DPLL_A_TEMP``                    attr device temperature info
     ``DPLL_A_TYPE``                    attr type of dpll device
+  ==================================== =================================
+
+  ==================================== =================================
   ``DPLL_CMD_DEVICE_SET``              command to set dpll device config
     ``DPLL_A_ID``                      attr internal dpll device index
     ``DPLL_A_MODE``                    attr selection mode to configure
+  ==================================== =================================
+
+  ==================================== =================================
   ``DPLL_CMD_PIN_GET``                 command to get pin ID
     ``DPLL_A_MODULE_NAME``             attr module name of registerer
     ``DPLL_A_CLOCK_ID``                attr Unique Clock Identifier
@@ -214,6 +223,9 @@ prefix and suffix according to attribute purpose:
     ``DPLL_A_PIN_PACKAGE_LABEL``       attr pin package label provided
                                        by registerer
     ``DPLL_A_PIN_TYPE``                attr type of a pin
+  ==================================== =================================
+
+  ==================================== =================================
   ``DPLL_CMD_PIN_GET``                 command to get pin info or dump
                                        list of available pins
     ``DPLL_A_PIN_ID``                  attr unique a pin ID
@@ -245,6 +257,9 @@ prefix and suffix according to attribute purpose:
                                        device or on the parent pin
     ``DPLL_A_PIN_DPLL_CAPS``           attr bitmask of pin-dpll
                                        capabilities
+  ==================================== =================================
+
+  ==================================== =================================
   ``DPLL_CMD_PIN_SET``                 command to set pins configuration
     ``DPLL_A_PIN_ID``                  attr unique a pin ID
     ``DPLL_A_PIN_DIRECTION``           attr requested direction of a pin

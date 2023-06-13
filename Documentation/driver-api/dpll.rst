@@ -4,10 +4,25 @@
 The Linux kernel dpll subsystem
 ===============================
 
+DPLL
+====
+
+PLL - Phase Locked Loop is an electronic circuit which syntonizes clock
+signal of a device with an external clock signal. Effectively enabling
+device to run on the same clock signal beat as provided on a PLL input.
+
+DPLL - Digital Phase Locked Loop is am integrated circuit which in
+addition to plain PLL behavior incorporates a digital phase detector
+and may have digital divider in the loop. As a result, the frequency on
+DPLL's input and output may be configurable.
+
+Subsystem
+=========
+
 The main purpose of dpll subsystem is to provide general interface
 to configure devices that use any kind of Digital PLL and could use
-different sources of signal to synchronize to as well as different
-types of outputs.
+different sources of input signal to synchronize to, as well as
+different types of outputs.
 The main interface is NETLINK_GENERIC based protocol with an event
 monitoring multicast group defined.
 

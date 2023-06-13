@@ -309,89 +309,10 @@ In general, it is possible to configure multiple parameters at once, but
 internally each parameter change will be invoked separately, where order
 of configuration is not guaranteed by any means.
 
-Device level configuration pre-defined enums
-=================================================
+Configuration pre-defined enums
+===============================
 
-Values for ``DPLL_A_LOCK_STATUS`` attribute:
-
-  ================================== ===================================
-  ``DPLL_LOCK_STATUS_UNLOCKED``      dpll device is in freerun, not
-                                     locked to any input pin
-  ``DPLL_LOCK_STATUS_LOCKED``        dpll device is locked to the input
-                                     but no holdover capability yet
-                                     acquired
-  ``DPLL_LOCK_STATUS_LOCKED_HO_ACQ`` dpll device is locked to the input
-                                     pin with holdover capability
-                                     acquired
-  ``DPLL_LOCK_STATUS_HOLDOVER``      dpll device lost a lock, using its
-                                     frequency holdover capabilities
-  ================================== ===================================
-
-Values for ``DPLL_A_MODE`` attribute:
-
-  ======================= ==============================================
-  ``DPLL_MODE_MANUAL``    input pin is manually selected by setting pin
-                          state to ``DPLL_PIN_STATE_CONNECTED`` on a
-                          dpll device
-  ``DPLL_MODE_AUTOMATIC`` input pin is auto selected according to
-                          configured pin priorities and input signal
-                          validity
-  ``DPLL_MODE_HOLDOVER``  force holdover mode of dpll
-  ``DPLL_MODE_FREERUN``   dpll device is driven by supplied system clock
-                          without holdover capabilities
-  ======================= ==============================================
-
-Values for ``DPLL_A_TYPE`` attribute:
-
-  ================= ===================================================
-  ``DPLL_TYPE_PPS`` dpll device used to provide pulse-per-second output
-  ``DPLL_TYPE_EEC`` dpll device used to drive ethernet equipment clock
-  ================= ===================================================
-
-Pin level configuration pre-defined enums
-=========================================
-
-Values for ``DPLL_A_PIN_STATE`` attribute:
-
-  =============================== ======================================
-  ``DPLL_PIN_STATE_CONNECTED``    Pin used as active input for a dpll
-                                  device or for a parent pin
-  ``DPLL_PIN_STATE_DISCONNECTED`` Pin disconnected from a dpll device or
-                                  from a parent pin
-  ``DPLL_PIN_STATE_SELECTABLE``   Pin enabled for automatic selection
-  =============================== ======================================
-
-Values for ``DPLL_A_PIN_DIRECTION`` attribute:
-
-  ============================= ====================================
-  ``DPLL_PIN_DIRECTION_INPUT``  used to provide its signal to a dpll
-                                device
-  ``DPLL_PIN_DIRECTION_OUTPUT`` used to output the signal from a dpll
-                                device
-  ============================= ====================================
-
-Values for ``DPLL_A_PIN_TYPE`` attributes:
-
-  ================================ =====================================
-  ``DPLL_PIN_TYPE_MUX``            MUX type pin, connected pins shall
-                                   have their own types
-  ``DPLL_PIN_TYPE_EXT``            External pin
-  ``DPLL_PIN_TYPE_SYNCE_ETH_PORT`` SyncE on Ethernet port
-  ``DPLL_PIN_TYPE_INT_OSCILLATOR`` Internal Oscillator (i.e. Holdover
-                                   with Atomic Clock as an input)
-  ``DPLL_PIN_TYPE_GNSS``           GNSS 1PPS input
-  ================================ =====================================
-
-Values for ``DPLL_A_PIN_DPLL_CAPS`` attributes:
-
-  ====================================== ===============================
-  ``DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE`` Bit present if direction of
-                                         pin can change
-  ``DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE``  Bit present if priority of pin
-                                         can change
-  ``DPLL_PIN_CAPS_STATE_CAN_CHANGE``     Bit present if state of pin can
-                                         change
-  ====================================== ===============================
+.. kernel-doc:: include/uapi/linux/dpll.h
 
 Notifications
 =============

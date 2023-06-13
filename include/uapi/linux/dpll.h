@@ -126,6 +126,9 @@ enum dpll_pin_state {
 /**
  * enum dpll_pin_caps - defines possible capabilities of a pin, valid flags on
  *   DPLL_A_PIN_CAPS attribute
+ * @DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE: pin direction can be changed
+ * @DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE: pin prority can be changed
+ * @DPLL_PIN_CAPS_STATE_CAN_CHANGE: pin state can be changed
  */
 enum dpll_pin_caps {
 	DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE = 1,

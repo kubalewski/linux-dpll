@@ -164,10 +164,13 @@ definitions:
     entries:
       -
         name: direction-can-change
+        doc: pin direction can be changed
       -
         name: priority-can-change
+        doc: pin prority can be changed
       -
         name: state-can-change
+        doc: pin state can be changed
 
 attribute-sets:
   -

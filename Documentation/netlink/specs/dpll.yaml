@@ -252,12 +252,17 @@ attribute-sets:
         name: pin-dpll-caps
         type: u32
       -
-        name: pin-parent
+        name: pin-parent-device
         type: nest
         multi-attr: true
-        nested-attributes: pin-parent
+        nested-attributes: pin-parent-device
+      -
+        name: pin-parent-pin
+        type: nest
+        multi-attr: true
+        nested-attributes: pin-parent-pin
   -
-    name: pin-parent
+    name: pin-parent-device
     subset-of: dpll
     attributes:
       -
@@ -272,10 +277,16 @@ attribute-sets:
       -
         name: pin-state
         type: u8
+  -
+    name: pin-parent-pin
+    subset-of: dpll
+    attributes:
+      -
+        name: pin-state
+        type: u8
       -
         name: pin-id
         type: u32
-
   -
     name: pin-frequency-range
     subset-of: dpll
@@ -388,7 +399,7 @@ operations:
             - pin-type
         reply:
           attributes:
-            - id
+            - pin-id
 
     -
       name: pin-get
@@ -407,7 +418,6 @@ operations:
         post: dpll-pin-post-doit
         request:
           attributes:
-            - id
             - pin-id
         reply: &pin-attrs
           attributes:
@@ -418,8 +428,9 @@ operations:
             - pin-type
             - pin-frequency
             - pin-frequency-supported
-            - pin-parent
             - pin-dpll-caps
+            - pin-parent-device
+            - pin-parent-pin
 
       dump:
         pre: dpll-lock-dumpit
@@ -440,13 +451,13 @@ operations:
         post: dpll-pin-post-doit
         request:
           attributes:
-            - id
             - pin-id
             - pin-frequency
             - pin-direction
             - pin-prio
             - pin-state
-            - pin-parent
+            - pin-parent-device
+            - pin-parent-pin
     -
       name: pin-create-ntf
       doc: Notification about pin appearing

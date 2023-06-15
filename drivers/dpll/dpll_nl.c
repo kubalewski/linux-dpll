@@ -13,9 +13,9 @@
 /* Common nested types */
 const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_STATE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_MAX(NLA_U8, 2),
+	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_RANGE(NLA_U8, 1, 2),
 	[DPLL_A_PIN_PRIO] = { .type = NLA_U32, },
-	[DPLL_A_PIN_STATE] = NLA_POLICY_MAX(NLA_U8, 3),
+	[DPLL_A_PIN_STATE] = NLA_POLICY_RANGE(NLA_U8, 1, 3),
 	[DPLL_A_PIN_ID] = { .type = NLA_U32, },
 };
 
@@ -23,7 +23,7 @@ const struct nla_policy dpll_pin_parent_nl_policy[DPLL_A_PIN_STATE + 1] = {
 static const struct nla_policy dpll_device_id_get_nl_policy[DPLL_A_TYPE + 1] = {
 	[DPLL_A_MODULE_NAME] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_CLOCK_ID] = { .type = NLA_U64, },
-	[DPLL_A_TYPE] = NLA_POLICY_MAX(NLA_U8, 2),
+	[DPLL_A_TYPE] = NLA_POLICY_RANGE(NLA_U8, 1, 2),
 };
 
 /* DPLL_CMD_DEVICE_GET - do */
@@ -35,7 +35,7 @@ static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_MODULE_NAME + 1]
 /* DPLL_CMD_DEVICE_SET - do */
 static const struct nla_policy dpll_device_set_nl_policy[DPLL_A_MODE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_MODE] = NLA_POLICY_MAX(NLA_U8, 4),
+	[DPLL_A_MODE] = NLA_POLICY_RANGE(NLA_U8, 1, 4),
 };
 
 /* DPLL_CMD_PIN_ID_GET - do */
@@ -45,7 +45,7 @@ static const struct nla_policy dpll_pin_id_get_nl_policy[DPLL_A_PIN_TYPE + 1] = 
 	[DPLL_A_PIN_BOARD_LABEL] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_PIN_PANEL_LABEL] = { .type = NLA_NUL_STRING, },
 	[DPLL_A_PIN_PACKAGE_LABEL] = { .type = NLA_NUL_STRING, },
-	[DPLL_A_PIN_TYPE] = NLA_POLICY_MAX(NLA_U8, 5),
+	[DPLL_A_PIN_TYPE] = NLA_POLICY_RANGE(NLA_U8, 1, 5),
 };
 
 /* DPLL_CMD_PIN_GET - do */
@@ -64,10 +64,10 @@ static const struct nla_policy dpll_pin_set_nl_policy[DPLL_A_PIN_PARENT + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
 	[DPLL_A_PIN_ID] = { .type = NLA_U32, },
 	[DPLL_A_PIN_FREQUENCY] = { .type = NLA_U64, },
-	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_MAX(NLA_U8, 2),
+	[DPLL_A_PIN_DIRECTION] = NLA_POLICY_RANGE(NLA_U8, 1, 2),
 	[DPLL_A_PIN_PRIO] = { .type = NLA_U32, },
-	[DPLL_A_PIN_STATE] = NLA_POLICY_MAX(NLA_U8, 3),
-	[DPLL_A_PIN_PARENT] = { .type = NLA_NESTED, },
+	[DPLL_A_PIN_STATE] = NLA_POLICY_RANGE(NLA_U8, 1, 3),
+	[DPLL_A_PIN_PARENT] = NLA_POLICY_NESTED(dpll_pin_parent_nl_policy),
 };
 
 /* Ops table for dpll */

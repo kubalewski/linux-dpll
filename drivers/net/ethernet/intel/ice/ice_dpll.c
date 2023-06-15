@@ -1964,28 +1964,26 @@ deinit_info:
  */
 void ice_dpll_init(struct ice_pf *pf)
 {
-	bool cgu_present = ice_is_feature_supported(pf, ICE_F_CGU);
+	bool cgu = ice_is_feature_supported(pf, ICE_F_CGU);
 	struct ice_dplls *d = &pf->dplls;
 	int err = 0;
 
 	mutex_init(&d->lock);
 	mutex_lock(&d->lock);
-	err = ice_dpll_init_info(pf, cgu_present);
+	err = ice_dpll_init_info(pf, cgu);
 	if (err)
 		goto err_exit;
-	err = ice_dpll_init_dpll(pf, &pf->dplls.eec, cgu_present,
-				 DPLL_TYPE_EEC);
+	err = ice_dpll_init_dpll(pf, &pf->dplls.eec, cgu, DPLL_TYPE_EEC);
 	if (err)
 		goto deinit_info;
-	err = ice_dpll_init_dpll(pf, &pf->dplls.pps, cgu_present,
-				 DPLL_TYPE_PPS);
+	err = ice_dpll_init_dpll(pf, &pf->dplls.pps, cgu, DPLL_TYPE_PPS);
 	if (err)
 		goto deinit_eec;
-	err = ice_dpll_init_pins(pf, cgu_present);
+	err = ice_dpll_init_pins(pf, cgu);
 	if (err)
 		goto deinit_pps;
 	set_bit(ICE_FLAG_DPLL, pf->flags);
-	if (cgu_present) {
+	if (cgu) {
 		err = ice_dpll_init_worker(pf);
 		if (err)
 			goto deinit_pins;
@@ -1996,11 +1994,11 @@ void ice_dpll_init(struct ice_pf *pf)
 	return;
 
 deinit_pins:
-	ice_dpll_deinit_pins(pf, cgu_present);
+	ice_dpll_deinit_pins(pf, cgu);
 deinit_pps:
-	ice_dpll_deinit_dpll(pf, &pf->dplls.pps, cgu_present);
+	ice_dpll_deinit_dpll(pf, &pf->dplls.pps, cgu);
 deinit_eec:
-	ice_dpll_deinit_dpll(pf, &pf->dplls.eec, cgu_present);
+	ice_dpll_deinit_dpll(pf, &pf->dplls.eec, cgu);
 deinit_info:
 	ice_dpll_deinit_info(pf);
 err_exit:

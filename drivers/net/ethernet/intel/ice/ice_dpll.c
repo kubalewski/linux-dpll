@@ -1731,18 +1731,19 @@ void ice_dpll_deinit(struct ice_pf *pf)
 {
 	bool cgu = ice_is_feature_supported(pf, ICE_F_CGU);
 
-	if (test_bit(ICE_FLAG_DPLL, pf->flags)) {
-		mutex_lock(&pf->dplls.lock);
-		ice_dpll_deinit_pins(pf, cgu);
-		ice_dpll_deinit_info(pf);
-		ice_dpll_deinit_dpll(pf, &pf->dplls.pps, cgu);
-		ice_dpll_deinit_dpll(pf, &pf->dplls.eec, cgu);
-		if (cgu)
-			ice_dpll_deinit_worker(pf);
-		clear_bit(ICE_FLAG_DPLL, pf->flags);
-		mutex_unlock(&pf->dplls.lock);
-		mutex_destroy(&pf->dplls.lock);
-	}
+	if (!test_bit(ICE_FLAG_DPLL, pf->flags))
+		return;
+
+	mutex_lock(&pf->dplls.lock);
+	ice_dpll_deinit_pins(pf, cgu);
+	ice_dpll_deinit_dpll(pf, &pf->dplls.pps, cgu);
+	ice_dpll_deinit_dpll(pf, &pf->dplls.eec, cgu);
+	ice_dpll_deinit_info(pf);
+	if (cgu)
+		ice_dpll_deinit_worker(pf);
+	clear_bit(ICE_FLAG_DPLL, pf->flags);
+	mutex_unlock(&pf->dplls.lock);
+	mutex_destroy(&pf->dplls.lock);
 }
 
 /**

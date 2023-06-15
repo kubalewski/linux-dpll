@@ -7,6 +7,7 @@
 #include "ice_flow.h"
 
 #define ICE_PF_RESET_WAIT_COUNT	300
+#define ICE_MAX_NETLIST_SIZE	10
 
 static const char * const ice_link_mode_str_low[] = {
 	[0] = "100BASE_TX",
@@ -464,8 +465,6 @@ ice_aq_get_netlist_node(struct ice_hw *hw, struct ice_aqc_get_link_topo *cmd,
 	return 0;
 }
 
-#define MAX_NETLIST_SIZE	10
-
 /**
  * ice_find_netlist_node
  * @hw: pointer to the hw struct
@@ -486,7 +485,7 @@ ice_find_netlist_node(struct ice_hw *hw, u8 node_type_ctx, u8 node_part_number,
 	u16 rec_node_handle;
 	u8 idx;
 
-	for (idx = 0; idx < MAX_NETLIST_SIZE; idx++) {
+	for (idx = 0; idx < ICE_MAX_NETLIST_SIZE; idx++) {
 		int status;
 
 		memset(&cmd, 0, sizeof(cmd));

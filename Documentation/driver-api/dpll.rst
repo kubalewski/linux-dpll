@@ -410,7 +410,7 @@ Required pin level callback operations:
 - ``.direction_get``.
 
 Every other operation handler is checked for existence and
-``-ENOTSUPP`` is returned in case of absence of specific handler.
+``-EOPNOTSUPP`` is returned in case of absence of specific handler.
 
 SyncE enablement
 ================

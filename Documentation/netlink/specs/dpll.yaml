@@ -9,7 +9,7 @@ definitions:
     type: enum
     name: mode
     doc: |
-      working-modes a dpll can support, differentiate if and how dpll selects
+      working modes a dpll can support, differentiates if and how dpll selects
       one of its inputs to syntonize with it, valid values for DPLL_A_MODE
       attribute
     entries:
@@ -19,7 +19,7 @@ definitions:
         value: 1
       -
         name: automatic
-        doc: highest prio, valid input, auto selected by dpll
+        doc: highest prio input pin auto selected by dpll
       -
         name: holdover
         doc: dpll forced into holdover mode

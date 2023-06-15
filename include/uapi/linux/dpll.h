@@ -10,11 +10,11 @@
 #define DPLL_FAMILY_VERSION	1
 
 /**
- * enum dpll_mode - working-modes a dpll can support, differentiate if and how
+ * enum dpll_mode - working modes a dpll can support, differentiates if and how
  *   dpll selects one of its inputs to syntonize with it, valid values for
  *   DPLL_A_MODE attribute
  * @DPLL_MODE_MANUAL: input can be only selected by sending a request to dpll
- * @DPLL_MODE_AUTOMATIC: highest prio, valid input, auto selected by dpll
+ * @DPLL_MODE_AUTOMATIC: highest prio input pin auto selected by dpll
  * @DPLL_MODE_HOLDOVER: dpll forced into holdover mode
  * @DPLL_MODE_FREERUN: dpll driven on system clk
  */

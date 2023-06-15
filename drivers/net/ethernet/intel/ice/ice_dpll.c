@@ -16,7 +16,6 @@
  */
 static const enum dpll_lock_status
 ice_dpll_status[__DPLL_LOCK_STATUS_MAX] = {
-	[ICE_CGU_STATE_INVALID] = 0,
 	[ICE_CGU_STATE_FREERUN] = DPLL_LOCK_STATUS_UNLOCKED,
 	[ICE_CGU_STATE_LOCKED] = DPLL_LOCK_STATUS_LOCKED,
 	[ICE_CGU_STATE_LOCKED_HO_ACQ] = DPLL_LOCK_STATUS_LOCKED_HO_ACQ,
@@ -27,7 +26,7 @@ ice_dpll_status[__DPLL_LOCK_STATUS_MAX] = {
  * ice_dpll_pin_type - enumerate ice pin types
  */
 enum ice_dpll_pin_type {
-	ICE_DPLL_PIN_INVALID = 0,
+	ICE_DPLL_PIN_INVALID,
 	ICE_DPLL_PIN_TYPE_INPUT,
 	ICE_DPLL_PIN_TYPE_OUTPUT,
 	ICE_DPLL_PIN_TYPE_RCLK_INPUT,

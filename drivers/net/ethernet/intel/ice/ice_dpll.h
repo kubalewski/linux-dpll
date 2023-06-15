@@ -95,7 +95,7 @@ struct ice_dplls {
 	u64 clock_id;
 };
 
-int ice_dpll_init(struct ice_pf *pf);
+void ice_dpll_init(struct ice_pf *pf);
 
 void ice_dpll_deinit(struct ice_pf *pf);
 

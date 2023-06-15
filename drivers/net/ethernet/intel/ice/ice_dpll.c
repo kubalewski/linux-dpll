@@ -1963,7 +1963,7 @@ deinit_info:
  * * 0 - success
  * * negative - init failure reason
  */
-int ice_dpll_init(struct ice_pf *pf)
+void ice_dpll_init(struct ice_pf *pf)
 {
 	bool cgu_present = ice_is_feature_supported(pf, ICE_F_CGU);
 	struct ice_dplls *d = &pf->dplls;
@@ -1994,7 +1994,7 @@ int ice_dpll_init(struct ice_pf *pf)
 	mutex_unlock(&d->lock);
 	dev_info(ice_pf_to_dev(pf), "DPLLs init successful\n");
 
-	return err;
+	return;
 
 deinit_pins:
 	ice_dpll_deinit_pins(pf, cgu_present);
@@ -2010,5 +2010,5 @@ err_exit:
 	mutex_destroy(&d->lock);
 	dev_warn(ice_pf_to_dev(pf), "DPLLs init failure err:\n");
 
-	return err;
+	return;
 }

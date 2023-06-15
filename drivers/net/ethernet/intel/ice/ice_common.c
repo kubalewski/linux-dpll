@@ -5158,14 +5158,10 @@ ice_aq_get_output_pin_cfg(struct ice_hw *hw, u8 output_idx, u8 *flags,
  *
  * Return: signed 64 bit representation of signed 48 bit value.
  */
-static inline
-s64 convert_s48_to_s64(s64 signed_48)
+static s64 convert_s48_to_s64(s64 signed_48)
 {
-	const s64 MASK_SIGN_BITS = GENMASK_ULL(63, 48);
-	const s64 SIGN_BIT_47 = BIT_ULL(47);
-
-	return ((signed_48 & SIGN_BIT_47) ? (s64)(MASK_SIGN_BITS | signed_48)
-		: signed_48);
+	return signed_48 & BIT_ULL(47) ?
+		GENMASK_ULL(63, 48) | signed_48 : signed_48;
 }
 
 /**

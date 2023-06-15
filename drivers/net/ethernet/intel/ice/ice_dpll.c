@@ -1753,7 +1753,7 @@ void ice_dpll_deinit(struct ice_pf *pf)
  * Init information for directly connected pins, cache them in pf's pins
  * structures.
  *
- * Context: Function initializes and holds pf->dplls.lock mutex.
+ * Context: Called under pf->dplls.lock.
  * Return:
  * * 0 - success
  * * negative - init failure reason
@@ -1870,6 +1870,7 @@ ice_dpll_init_pins_info(struct ice_pf *pf, enum ice_dpll_pin_type pin_type)
  *
  * Acquire (from HW) and set basic dpll information (on pf->dplls struct).
  *
+ * Context: Called under pf->dplls.lock
  * Return:
  * * 0 - success
  * * negative - init failure reason
@@ -1959,9 +1960,7 @@ deinit_info:
  * subsystem. Allow userpsace to obtain state of DPLL and handling of DPLL
  * configuration requests.
  *
- * Return:
- * * 0 - success
- * * negative - init failure reason
+ * Context: Function initializes and holds pf->dplls.lock mutex.
  */
 void ice_dpll_init(struct ice_pf *pf)
 {

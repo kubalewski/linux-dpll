@@ -1829,7 +1829,7 @@ static int ice_dpll_init_rclk_pin(struct ice_pf *pf)
 	struct ice_dpll_pin *pin = &pf->dplls.rclk;
 	struct device *dev = ice_pf_to_dev(pf);
 
-	pin->prop.board_label = dev_name(dev);
+	pin->prop.package_label = dev_name(dev);
 	pin->prop.type = DPLL_PIN_TYPE_SYNCE_ETH_PORT;
 	pin->prop.capabilities |= DPLL_PIN_CAPS_STATE_CAN_CHANGE;
 	pin->pf = pf;

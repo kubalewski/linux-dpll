@@ -20,12 +20,6 @@ definitions:
       -
         name: automatic
         doc: highest prio input pin auto selected by dpll
-      -
-        name: holdover
-        doc: dpll forced into holdover mode
-      -
-        name: freerun
-        doc: dpll driven on system clk
     render-max: true
   -
     type: enum
@@ -37,8 +31,7 @@ definitions:
       -
         name: unlocked
         doc: |
-          dpll was not yet locked to any valid input (or is in mode:
-            DPLL_MODE_FREERUN)
+          dpll was not yet locked to any valid input
         value: 1
       -
         name: locked
@@ -52,11 +45,10 @@ definitions:
         name: holdover
         doc: |
           dpll is in holdover state - lost a valid lock or was forced
-          by selecting DPLL_MODE_HOLDOVER mode (latter possible only
-          when dpll lock-state was already DPLL_LOCK_STATUS_LOCKED,
-          if dpll lock-state was not DPLL_LOCK_STATUS_LOCKED, the
-          dpll's lock-state shall remain DPLL_LOCK_STATUS_UNLOCKED
-          even if DPLL_MODE_HOLDOVER was requested)
+          by disconnecting all the pins (latter possible only
+          when dpll lock-state was already DPLL_LOCK_STATUS_LOCKED_HO_ACQ,
+          if dpll lock-state was not DPLL_LOCK_STATUS_LOCKED_HO_ACQ, the
+          dpll's lock-state shall remain DPLL_LOCK_STATUS_UNLOCKED)
     render-max: true
   -
     type: const

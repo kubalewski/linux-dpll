@@ -38,7 +38,7 @@ static const struct nla_policy dpll_device_get_nl_policy[DPLL_A_MODULE_NAME + 1]
 /* DPLL_CMD_DEVICE_SET - do */
 static const struct nla_policy dpll_device_set_nl_policy[DPLL_A_MODE + 1] = {
 	[DPLL_A_ID] = { .type = NLA_U32, },
-	[DPLL_A_MODE] = NLA_POLICY_RANGE(NLA_U8, 1, 4),
+	[DPLL_A_MODE] = NLA_POLICY_RANGE(NLA_U8, 1, 2),
 };
 
 /* DPLL_CMD_PIN_ID_GET - do */

@@ -1991,7 +1991,7 @@ void ice_dpll_init(struct ice_pf *pf)
 			goto deinit_pins;
 	}
 	mutex_unlock(&d->lock);
-	dev_info(ice_pf_to_dev(pf), "DPLLs init successful\n");
+	dev_dbg(ice_pf_to_dev(pf), "DPLLs init successful\n");
 
 	return;
 
@@ -2007,7 +2007,7 @@ err_exit:
 	clear_bit(ICE_FLAG_DPLL, pf->flags);
 	mutex_unlock(&d->lock);
 	mutex_destroy(&d->lock);
-	dev_warn(ice_pf_to_dev(pf), "DPLLs init failure err:\n");
+	dev_warn(ice_pf_to_dev(pf), "DPLLs init failure err:%d\n", err);
 
 	return;
 }

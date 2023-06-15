@@ -211,7 +211,7 @@ dpll_msg_add_pin_parents(struct sk_buff *msg, struct dpll_pin *pin,
 					    ppin, parent_priv, &state, extack);
 		if (ret)
 			return -EFAULT;
-		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT);
+		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT_PIN);
 		if (!nest)
 			return -EMSGSIZE;
 		ret = dpll_msg_add_pin_handle(msg, ppin);
@@ -241,7 +241,7 @@ dpll_msg_add_pin_dplls(struct sk_buff *msg, struct dpll_pin *pin,
 	int ret;
 
 	xa_for_each(&pin->dpll_refs, index, ref) {
-		attr = nla_nest_start(msg, DPLL_A_PIN_PARENT);
+		attr = nla_nest_start(msg, DPLL_A_PIN_PARENT_DEVICE);
 		if (!attr)
 			return -EMSGSIZE;
 		ret = dpll_msg_add_dev_handle(msg, ref->dpll);
@@ -523,58 +523,72 @@ dpll_pin_direction_set(struct dpll_pin *pin, struct dpll_device *dpll,
 }
 
 static int
-dpll_pin_parent_set(struct dpll_pin *pin, struct nlattr *parent_nest,
-		    struct netlink_ext_ack *extack)
+dpll_pin_parent_device_set(struct dpll_pin *pin, struct nlattr *parent_nest,
+			   struct netlink_ext_ack *extack)
 {
 	struct nlattr *tb[DPLL_A_MAX + 1];
 	enum dpll_pin_direction direction;
-	u32 ppin_idx, pdpll_idx, prio;
 	enum dpll_pin_state state;
 	struct dpll_pin_ref *ref;
 	struct dpll_device *dpll;
+	u32 pdpll_idx, prio;
 	int ret;
 
 	nla_parse_nested(tb, DPLL_A_MAX, parent_nest,
 			 NULL, extack);
-	if ((tb[DPLL_A_ID] && tb[DPLL_A_PIN_ID]) ||
-	    !(tb[DPLL_A_ID] || tb[DPLL_A_PIN_ID])) {
-		NL_SET_ERR_MSG(extack, "one parent id expected");
+	if (!tb[DPLL_A_ID]) {
+		NL_SET_ERR_MSG(extack, "device parent id expected");
 		return -EINVAL;
 	}
-	if (tb[DPLL_A_ID]) {
-		pdpll_idx = nla_get_u32(tb[DPLL_A_ID]);
-		dpll = xa_load(&dpll_device_xa, pdpll_idx);
-		if (!dpll)
-			return -EINVAL;
-		ref = xa_load(&pin->dpll_refs, dpll->device_idx);
-		if (!ref)
-			return -EINVAL;
-		if (tb[DPLL_A_PIN_STATE]) {
-			state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
-			ret = dpll_pin_state_set(dpll, pin, state, extack);
-			if (ret)
-				return ret;
-		}
-		if (tb[DPLL_A_PIN_PRIO]) {
-			prio = nla_get_u8(tb[DPLL_A_PIN_PRIO]);
-			ret = dpll_pin_prio_set(dpll, pin, prio, extack);
-			if (ret)
-				return ret;
-		}
-		if (tb[DPLL_A_PIN_DIRECTION]) {
-			direction = nla_get_u8(tb[DPLL_A_PIN_DIRECTION]);
-			ret = dpll_pin_direction_set(pin, dpll, direction,
-						     extack);
-			if (ret)
-				return ret;
-		}
-	} else if (tb[DPLL_A_PIN_ID]) {
-		ppin_idx = nla_get_u32(tb[DPLL_A_PIN_ID]);
+	pdpll_idx = nla_get_u32(tb[DPLL_A_ID]);
+	dpll = xa_load(&dpll_device_xa, pdpll_idx);
+	if (!dpll)
+		return -EINVAL;
+	ref = xa_load(&pin->dpll_refs, dpll->device_idx);
+	if (!ref)
+		return -EINVAL;
+	if (tb[DPLL_A_PIN_STATE]) {
 		state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
-		ret = dpll_pin_on_pin_state_set(pin, ppin_idx, state, extack);
+		ret = dpll_pin_state_set(dpll, pin, state, extack);
 		if (ret)
 			return ret;
 	}
+	if (tb[DPLL_A_PIN_PRIO]) {
+		prio = nla_get_u8(tb[DPLL_A_PIN_PRIO]);
+		ret = dpll_pin_prio_set(dpll, pin, prio, extack);
+		if (ret)
+			return ret;
+	}
+	if (tb[DPLL_A_PIN_DIRECTION]) {
+		direction = nla_get_u8(tb[DPLL_A_PIN_DIRECTION]);
+		ret = dpll_pin_direction_set(pin, dpll, direction, extack);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int
+dpll_pin_parent_pin_set(struct dpll_pin *pin, struct nlattr *parent_nest,
+			struct netlink_ext_ack *extack)
+{
+	struct nlattr *tb[DPLL_A_MAX + 1];
+	enum dpll_pin_state state;
+	u32 ppin_idx;
+	int ret;
+
+	nla_parse_nested(tb, DPLL_A_MAX, parent_nest,
+			 NULL, extack);
+	if (!tb[DPLL_A_PIN_ID]) {
+		NL_SET_ERR_MSG(extack, "parent pin id expected");
+		return -EINVAL;
+	}
+	ppin_idx = nla_get_u32(tb[DPLL_A_PIN_ID]);
+	state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
+	ret = dpll_pin_on_pin_state_set(pin, ppin_idx, state, extack);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -593,8 +607,13 @@ dpll_pin_set_from_nlattr(struct dpll_pin *pin, struct genl_info *info)
 			if (ret)
 				return ret;
 			break;
-		case DPLL_A_PIN_PARENT:
-			ret = dpll_pin_parent_set(pin, a, info->extack);
+		case DPLL_A_PIN_PARENT_DEVICE:
+			ret = dpll_pin_parent_device_set(pin, a, info->extack);
+			if (ret)
+				return ret;
+			break;
+		case DPLL_A_PIN_PARENT_PIN:
+			ret = dpll_pin_parent_pin_set(pin, a, info->extack);
 			if (ret)
 				return ret;
 			break;

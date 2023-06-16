@@ -1708,11 +1708,8 @@ static void ice_dpll_deinit_worker(struct ice_pf *pf)
 	struct ice_dplls *d = &pf->dplls;
 
 	kthread_cancel_delayed_work_sync(&d->work);
-	if (!IS_ERR_OR_NULL(d->kworker)) {
+	if (!IS_ERR_OR_NULL(d->kworker))
 		kthread_destroy_worker(d->kworker);
-		d->kworker = NULL;
-		dev_dbg(ice_pf_to_dev(pf), "DPLLs worker removed\n");
-	}
 }
 
 /**

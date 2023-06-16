@@ -1583,10 +1583,8 @@ static void ice_dpll_periodic_work(struct kthread_work *work)
 	if (!test_bit(ICE_FLAG_DPLL, pf->flags))
 		return;
 	ret = ice_dpll_cb_lock(pf);
-	if (ret) {
-		d->lock_err_num++;
+	if (ret)
 		goto resched;
-	}
 	ret = ice_dpll_update_state(pf, de, false);
 	if (!ret)
 		ret = ice_dpll_update_state(pf, dp, false);

@@ -90,7 +90,6 @@ struct ice_dplls {
 	u32 num_inputs;
 	u32 num_outputs;
 	int cgu_state_acq_err_num;
-	int lock_err_num;
 	u8 base_rclk_idx;
 	u64 clock_id;
 };

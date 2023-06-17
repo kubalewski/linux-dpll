@@ -653,13 +653,15 @@ dpll_pin_find(u64 clock_id, struct nlattr *mod_name_attr,
 			!nla_strcmp(mod_name_attr,
 				    module_name(pin->module)) : true;
 		type_match = type ? prop->type == type : true;
-		board_match = board_label && prop->board_label ?
-			!nla_strcmp(board_label, prop->board_label) : true;
-		panel_match = panel_label && prop->panel_label ?
-			!nla_strcmp(panel_label, prop->panel_label) : true;
-		package_match = package_label && prop->package_label ?
-			!nla_strcmp(package_label,
-				    prop->package_label) : true;
+		board_match = board_label ? (prop->board_label ?
+			!nla_strcmp(board_label, prop->board_label) : false) :
+			true;
+		panel_match = panel_label ? (prop->panel_label ?
+			!nla_strcmp(panel_label, prop->panel_label) : false) :
+			true;
+		package_match = package_label ? (prop->package_label ?
+			!nla_strcmp(package_label, prop->package_label) :
+			false) : true;
 		if (cid_match && mod_match && type_match && board_match &&
 		    panel_match && package_match) {
 			if (pin_match)
@@ -698,22 +700,22 @@ dpll_pin_find_from_nlattr(struct genl_info *info, struct sk_buff *skb)
 			if (type)
 				return -EINVAL;
 			type = nla_get_u8(attr);
-			break;
+		break;
 		case DPLL_A_PIN_BOARD_LABEL:
 			if (board_label_attr)
 				return -EINVAL;
 			board_label_attr = attr;
-			break;
+		break;
 		case DPLL_A_PIN_PANEL_LABEL:
 			if (panel_label_attr)
 				return -EINVAL;
 			panel_label_attr = attr;
-			break;
+		break;
 		case DPLL_A_PIN_PACKAGE_LABEL:
 			if (package_label_attr)
 				return -EINVAL;
 			package_label_attr = attr;
-			break;
+		break;
 		default:
 			break;
 		}
@@ -828,9 +830,9 @@ dpll_device_find(u64 clock_id, struct nlattr *mod_name_attr,
 
 	xa_for_each_marked(&dpll_device_xa, i, dpll, DPLL_REGISTERED) {
 		cid_match = clock_id ? dpll->clock_id == clock_id : true;
-		mod_match = mod_name_attr && module_name(dpll->module) ?
+		mod_match = mod_name_attr ? (module_name(dpll->module) ?
 			!nla_strcmp(mod_name_attr,
-				    module_name(dpll->module)) : true;
+				    module_name(dpll->module)) : false) : true;
 		type_match = type ? dpll->type == type : true;
 		if (cid_match && mod_match && type_match) {
 			if (dpll_match)

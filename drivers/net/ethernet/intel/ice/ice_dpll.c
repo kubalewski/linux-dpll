@@ -150,8 +150,9 @@ ice_dpll_frequency_set(const struct dpll_pin *pin, void *pin_priv,
 		       struct netlink_ext_ack *extack,
 		       enum ice_dpll_pin_type pin_type)
 {
-	struct ice_pf *pf = ((struct ice_dpll *)dpll_priv)->pf;
 	struct ice_dpll_pin *p = pin_priv;
+	struct ice_dpll *d = dpll_priv;
+	struct ice_pf *pf = d->pf;
 	int ret;
 
 	ret = ice_dpll_cb_lock(pf);
@@ -238,8 +239,9 @@ ice_dpll_frequency_get(const struct dpll_pin *pin, void *pin_priv,
 		       u64 *frequency, struct netlink_ext_ack *extack,
 		       enum ice_dpll_pin_type pin_type)
 {
-	struct ice_pf *pf = ((struct ice_dpll *)dpll_priv)->pf;
 	struct ice_dpll_pin *p = pin_priv;
+	struct ice_dpll *d = dpll_priv;
+	struct ice_pf *pf = d->pf;
 	int ret;
 
 	ret = ice_dpll_cb_lock(pf);
@@ -616,8 +618,9 @@ ice_dpll_pin_state_set(const struct dpll_pin *pin, void *pin_priv,
 		       bool enable, struct netlink_ext_ack *extack,
 		       enum ice_dpll_pin_type pin_type)
 {
-	struct ice_pf *pf = ((struct ice_dpll *)dpll_priv)->pf;
 	struct ice_dpll_pin *p = pin_priv;
+	struct ice_dpll *d = dpll_priv;
+	struct ice_pf *pf = d->pf;
 	int ret;
 
 	ret = ice_dpll_cb_lock(pf);
@@ -718,9 +721,9 @@ ice_dpll_pin_state_get(const struct dpll_pin *pin, void *pin_priv,
 		       struct netlink_ext_ack *extack,
 		       enum ice_dpll_pin_type pin_type)
 {
-	struct ice_pf *pf = ((struct ice_dpll *)dpll_priv)->pf;
 	struct ice_dpll_pin *p = pin_priv;
 	struct ice_dpll *d = dpll_priv;
+	struct ice_pf *pf = d->pf;
 	int ret;
 
 	ret = ice_dpll_cb_lock(pf);

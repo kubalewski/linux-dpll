@@ -484,26 +484,6 @@ err:
 }
 
 /**
- * ice_find_dpll - find ice_dpll on a pf
- * @pf: private board structure
- * @dpll: kernel's dpll_device pointer to be searched
- *
- * Context: Called under pf->dplls.lock
- * Return:
- * * pointer if ice_dpll with given device dpll pointer is found
- * * NULL if not found
- */
-static struct ice_dpll
-*ice_find_dpll(struct ice_pf *pf, const struct dpll_device *dpll)
-{
-	if (!pf || !dpll)
-		return NULL;
-
-	return dpll == pf->dplls.eec.dpll ? &pf->dplls.eec :
-	       dpll == pf->dplls.pps.dpll ? &pf->dplls.pps : NULL;
-}
-
-/**
  * ice_dpll_hw_input_prio_set - set input priority value in hardware
  * @pf: board private structure
  * @dpll: ice dpll pointer
@@ -733,22 +713,19 @@ ice_dpll_input_state_set(const struct dpll_pin *pin, void *pin_priv,
  */
 static int
 ice_dpll_pin_state_get(const struct dpll_pin *pin, void *pin_priv,
-		       const struct dpll_device *dpll,  void *dpll_priv,
+		       const struct dpll_device *dpll, void *dpll_priv,
 		       enum dpll_pin_state *state,
 		       struct netlink_ext_ack *extack,
 		       enum ice_dpll_pin_type pin_type)
 {
 	struct ice_pf *pf = ((struct ice_dpll *)dpll_priv)->pf;
 	struct ice_dpll_pin *p = pin_priv;
-	struct ice_dpll *d;
+	struct ice_dpll *d = dpll_priv;
 	int ret;
 
 	ret = ice_dpll_cb_lock(pf);
 	if (ret)
 		return ret;
-	d = ice_find_dpll(pf, dpll);
-	if (!d)
-		goto unlock;
 	ret = ice_dpll_pin_state_update(pf, p, pin_type);
 	if (ret)
 		goto unlock;

@@ -670,7 +670,7 @@ ice_dpll_output_state_set(const struct dpll_pin *pin, void *pin_priv,
 			  enum dpll_pin_state state,
 			  struct netlink_ext_ack *extack)
 {
-	bool enable = state == DPLL_PIN_STATE_CONNECTED ? true : false;
+	bool enable = state == DPLL_PIN_STATE_CONNECTED;
 
 	return ice_dpll_pin_state_set(pin, pin_priv, dpll, dpll_priv, enable,
 				      extack, ICE_DPLL_PIN_TYPE_OUTPUT);
@@ -698,7 +698,7 @@ ice_dpll_input_state_set(const struct dpll_pin *pin, void *pin_priv,
 			 enum dpll_pin_state state,
 			 struct netlink_ext_ack *extack)
 {
-	bool enable = state == DPLL_PIN_STATE_SELECTABLE ? true : false;
+	bool enable = state == DPLL_PIN_STATE_SELECTABLE;
 
 	return ice_dpll_pin_state_set(pin, pin_priv, dpll, dpll_priv, enable,
 				      extack, ICE_DPLL_PIN_TYPE_INPUT);
@@ -964,8 +964,8 @@ ice_dpll_rclk_state_on_pin_set(const struct dpll_pin *pin, void *pin_priv,
 			       enum dpll_pin_state state,
 			       struct netlink_ext_ack *extack)
 {
-	bool enable = state == DPLL_PIN_STATE_CONNECTED ? true : false;
 	struct ice_dpll_pin *p = pin_priv, *parent = parent_pin_priv;
+	bool enable = state == DPLL_PIN_STATE_CONNECTED;
 	struct ice_pf *pf = p->pf;
 	int ret = -EINVAL;
 	u32 hw_idx;

@@ -1223,16 +1223,10 @@ resched:
  */
 static void ice_dpll_release_pins(struct ice_dpll_pin *pins, int count)
 {
-	struct ice_dpll_pin *p;
 	int i;
 
-	for (i = 0; i < count; i++) {
-		p = &pins[i];
-		if (p && !IS_ERR_OR_NULL(p->pin)) {
-			dpll_pin_put(p->pin);
-			p->pin = NULL;
-		}
-	}
+	for (i = 0; i < count; i++)
+		dpll_pin_put(pins[i].pin);
 }
 
 /**
@@ -1290,14 +1284,10 @@ static void
 ice_dpll_unregister_pins(struct dpll_device *dpll, struct ice_dpll_pin *pins,
 			 const struct dpll_pin_ops *ops, int count)
 {
-	struct ice_dpll_pin *p;
 	int i;
 
-	for (i = 0; i < count; i++) {
-		p = &pins[i];
-		if (p && !IS_ERR_OR_NULL(p->pin))
-			dpll_pin_unregister(dpll, p->pin, ops, p);
-	}
+	for (i = 0; i < count; i++)
+		dpll_pin_unregister(dpll, pins[i].pin, ops, &pins[i]);
 }
 
 /**
@@ -1428,9 +1418,8 @@ static void ice_dpll_deinit_rclk_pin(struct ice_pf *pf)
 		parent = pf->dplls.inputs[rclk->parent_idx[i]].pin;
 		if (!parent)
 			continue;
-		if (!IS_ERR_OR_NULL(rclk->pin))
-			dpll_pin_on_pin_unregister(parent, rclk->pin,
-						   &ice_dpll_rclk_ops, rclk);
+		dpll_pin_on_pin_unregister(parent, rclk->pin,
+					   &ice_dpll_rclk_ops, rclk);
 	}
 	if (WARN_ON_ONCE(!vsi || !vsi->netdev))
 		return;
@@ -1598,12 +1587,10 @@ deinit_inputs:
 static void
 ice_dpll_deinit_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu)
 {
-	if (!IS_ERR(d->dpll)) {
-		if (cgu)
-			dpll_device_unregister(d->dpll, &ice_dpll_ops, d);
-		dpll_device_put(d->dpll);
-		dev_dbg(ice_pf_to_dev(pf), "(%p) dpll removed\n", d);
-	}
+	if (cgu)
+		dpll_device_unregister(d->dpll, &ice_dpll_ops, d);
+	dpll_device_put(d->dpll);
+	dev_dbg(ice_pf_to_dev(pf), "(%p) dpll removed\n", d);
 }
 
 /**
@@ -1660,8 +1647,7 @@ static void ice_dpll_deinit_worker(struct ice_pf *pf)
 	struct ice_dplls *d = &pf->dplls;
 
 	kthread_cancel_delayed_work_sync(&d->work);
-	if (!IS_ERR_OR_NULL(d->kworker))
-		kthread_destroy_worker(d->kworker);
+	kthread_destroy_worker(d->kworker);
 }
 
 /**

@@ -1269,7 +1269,8 @@ ice_dpll_get_pins(struct ice_pf *pf, struct ice_dpll_pin *pins,
 	return 0;
 
 release_pins:
-	ice_dpll_release_pins(pins, i);
+	while (--i >= 0)
+		dpll_pin_put(pins[i].pin);
 	return ret;
 }
 
@@ -1329,7 +1330,8 @@ ice_dpll_register_pins(struct dpll_device *dpll, struct ice_dpll_pin *pins,
 	return 0;
 
 unregister_pins:
-	ice_dpll_unregister_pins(dpll, pins, ops, i);
+	while (--i >= 0)
+		dpll_pin_unregister(dpll, pins[i].pin, ops, &pins[i]);
 	return ret;
 }
 

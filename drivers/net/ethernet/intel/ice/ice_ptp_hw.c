@@ -3281,7 +3281,6 @@ int ice_get_pf_c827_idx(struct ice_hw *hw, u8 *idx)
 	ctx = ICE_AQC_LINK_TOPO_NODE_TYPE_PHY << ICE_AQC_LINK_TOPO_NODE_TYPE_S;
 	ctx |= ICE_AQC_LINK_TOPO_NODE_CTX_PORT << ICE_AQC_LINK_TOPO_NODE_CTX_S;
 	cmd.addr.topo_params.node_type_ctx = ctx;
-	cmd.addr.topo_params.index = 0;
 
 	status = ice_aq_get_netlist_node(hw, &cmd, &node_part_number,
 					 &node_handle);

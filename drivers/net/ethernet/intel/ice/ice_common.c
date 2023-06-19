@@ -7,6 +7,7 @@
 #include "ice_flow.h"
 
 #define ICE_PF_RESET_WAIT_COUNT	300
+#define ICE_MAX_NETLIST_SIZE	10
 
 static const char * const ice_link_mode_str_low[] = {
 	[0] = "100BASE_TX",
@@ -464,8 +465,6 @@ ice_aq_get_netlist_node(struct ice_hw *hw, struct ice_aqc_get_link_topo *cmd,
 	return 0;
 }
 
-#define MAX_NETLIST_SIZE	10
-
 /**
  * ice_find_netlist_node
  * @hw: pointer to the hw struct
@@ -486,7 +485,7 @@ ice_find_netlist_node(struct ice_hw *hw, u8 node_type_ctx, u8 node_part_number,
 	u16 rec_node_handle;
 	u8 idx;
 
-	for (idx = 0; idx < MAX_NETLIST_SIZE; idx++) {
+	for (idx = 0; idx < ICE_MAX_NETLIST_SIZE; idx++) {
 		int status;
 
 		memset(&cmd, 0, sizeof(cmd));
@@ -5159,14 +5158,10 @@ ice_aq_get_output_pin_cfg(struct ice_hw *hw, u8 output_idx, u8 *flags,
  *
  * Return: signed 64 bit representation of signed 48 bit value.
  */
-static inline
-s64 convert_s48_to_s64(s64 signed_48)
+static s64 convert_s48_to_s64(s64 signed_48)
 {
-	const s64 MASK_SIGN_BITS = GENMASK_ULL(63, 48);
-	const s64 SIGN_BIT_47 = BIT_ULL(47);
-
-	return ((signed_48 & SIGN_BIT_47) ? (s64)(MASK_SIGN_BITS | signed_48)
-		: signed_48);
+	return signed_48 & BIT_ULL(47) ?
+		GENMASK_ULL(63, 48) | signed_48 : signed_48;
 }
 
 /**

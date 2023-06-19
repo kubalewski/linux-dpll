@@ -211,7 +211,7 @@ dpll_msg_add_pin_parents(struct sk_buff *msg, struct dpll_pin *pin,
 					    ppin, parent_priv, &state, extack);
 		if (ret)
 			return -EFAULT;
-		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT);
+		nest = nla_nest_start(msg, DPLL_A_PIN_PARENT_PIN);
 		if (!nest)
 			return -EMSGSIZE;
 		ret = dpll_msg_add_pin_handle(msg, ppin);
@@ -241,7 +241,7 @@ dpll_msg_add_pin_dplls(struct sk_buff *msg, struct dpll_pin *pin,
 	int ret;
 
 	xa_for_each(&pin->dpll_refs, index, ref) {
-		attr = nla_nest_start(msg, DPLL_A_PIN_PARENT);
+		attr = nla_nest_start(msg, DPLL_A_PIN_PARENT_DEVICE);
 		if (!attr)
 			return -EMSGSIZE;
 		ret = dpll_msg_add_dev_handle(msg, ref->dpll);
@@ -303,12 +303,14 @@ dpll_cmd_pin_fill_details(struct sk_buff *msg, struct dpll_pin *pin,
 
 size_t dpll_msg_pin_handle_size(struct dpll_pin *pin)
 {
-	return nla_total_size(4); /* DPLL_A_PIN_ID */
+	return pin ? nla_total_size(4) : 0; /* DPLL_A_PIN_ID */
 }
 EXPORT_SYMBOL_GPL(dpll_msg_pin_handle_size);
 
 int dpll_msg_add_pin_handle(struct sk_buff *msg, struct dpll_pin *pin)
 {
+	if (!pin)
+		return 0;
 	if (nla_put_u32(msg, DPLL_A_PIN_ID, pin->id))
 		return -EMSGSIZE;
 	return 0;
@@ -523,58 +525,72 @@ dpll_pin_direction_set(struct dpll_pin *pin, struct dpll_device *dpll,
 }
 
 static int
-dpll_pin_parent_set(struct dpll_pin *pin, struct nlattr *parent_nest,
-		    struct netlink_ext_ack *extack)
+dpll_pin_parent_device_set(struct dpll_pin *pin, struct nlattr *parent_nest,
+			   struct netlink_ext_ack *extack)
 {
 	struct nlattr *tb[DPLL_A_MAX + 1];
 	enum dpll_pin_direction direction;
-	u32 ppin_idx, pdpll_idx, prio;
 	enum dpll_pin_state state;
 	struct dpll_pin_ref *ref;
 	struct dpll_device *dpll;
+	u32 pdpll_idx, prio;
 	int ret;
 
 	nla_parse_nested(tb, DPLL_A_MAX, parent_nest,
 			 NULL, extack);
-	if ((tb[DPLL_A_ID] && tb[DPLL_A_PIN_ID]) ||
-	    !(tb[DPLL_A_ID] || tb[DPLL_A_PIN_ID])) {
-		NL_SET_ERR_MSG(extack, "one parent id expected");
+	if (!tb[DPLL_A_ID]) {
+		NL_SET_ERR_MSG(extack, "device parent id expected");
 		return -EINVAL;
 	}
-	if (tb[DPLL_A_ID]) {
-		pdpll_idx = nla_get_u32(tb[DPLL_A_ID]);
-		dpll = xa_load(&dpll_device_xa, pdpll_idx);
-		if (!dpll)
-			return -EINVAL;
-		ref = xa_load(&pin->dpll_refs, dpll->device_idx);
-		if (!ref)
-			return -EINVAL;
-		if (tb[DPLL_A_PIN_STATE]) {
-			state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
-			ret = dpll_pin_state_set(dpll, pin, state, extack);
-			if (ret)
-				return ret;
-		}
-		if (tb[DPLL_A_PIN_PRIO]) {
-			prio = nla_get_u8(tb[DPLL_A_PIN_PRIO]);
-			ret = dpll_pin_prio_set(dpll, pin, prio, extack);
-			if (ret)
-				return ret;
-		}
-		if (tb[DPLL_A_PIN_DIRECTION]) {
-			direction = nla_get_u8(tb[DPLL_A_PIN_DIRECTION]);
-			ret = dpll_pin_direction_set(pin, dpll, direction,
-						     extack);
-			if (ret)
-				return ret;
-		}
-	} else if (tb[DPLL_A_PIN_ID]) {
-		ppin_idx = nla_get_u32(tb[DPLL_A_PIN_ID]);
+	pdpll_idx = nla_get_u32(tb[DPLL_A_ID]);
+	dpll = xa_load(&dpll_device_xa, pdpll_idx);
+	if (!dpll)
+		return -EINVAL;
+	ref = xa_load(&pin->dpll_refs, dpll->device_idx);
+	if (!ref)
+		return -EINVAL;
+	if (tb[DPLL_A_PIN_STATE]) {
 		state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
-		ret = dpll_pin_on_pin_state_set(pin, ppin_idx, state, extack);
+		ret = dpll_pin_state_set(dpll, pin, state, extack);
 		if (ret)
 			return ret;
 	}
+	if (tb[DPLL_A_PIN_PRIO]) {
+		prio = nla_get_u8(tb[DPLL_A_PIN_PRIO]);
+		ret = dpll_pin_prio_set(dpll, pin, prio, extack);
+		if (ret)
+			return ret;
+	}
+	if (tb[DPLL_A_PIN_DIRECTION]) {
+		direction = nla_get_u8(tb[DPLL_A_PIN_DIRECTION]);
+		ret = dpll_pin_direction_set(pin, dpll, direction, extack);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int
+dpll_pin_parent_pin_set(struct dpll_pin *pin, struct nlattr *parent_nest,
+			struct netlink_ext_ack *extack)
+{
+	struct nlattr *tb[DPLL_A_MAX + 1];
+	enum dpll_pin_state state;
+	u32 ppin_idx;
+	int ret;
+
+	nla_parse_nested(tb, DPLL_A_MAX, parent_nest,
+			 NULL, extack);
+	if (!tb[DPLL_A_PIN_ID]) {
+		NL_SET_ERR_MSG(extack, "parent pin id expected");
+		return -EINVAL;
+	}
+	ppin_idx = nla_get_u32(tb[DPLL_A_PIN_ID]);
+	state = nla_get_u8(tb[DPLL_A_PIN_STATE]);
+	ret = dpll_pin_on_pin_state_set(pin, ppin_idx, state, extack);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -593,8 +609,13 @@ dpll_pin_set_from_nlattr(struct dpll_pin *pin, struct genl_info *info)
 			if (ret)
 				return ret;
 			break;
-		case DPLL_A_PIN_PARENT:
-			ret = dpll_pin_parent_set(pin, a, info->extack);
+		case DPLL_A_PIN_PARENT_DEVICE:
+			ret = dpll_pin_parent_device_set(pin, a, info->extack);
+			if (ret)
+				return ret;
+			break;
+		case DPLL_A_PIN_PARENT_PIN:
+			ret = dpll_pin_parent_pin_set(pin, a, info->extack);
 			if (ret)
 				return ret;
 			break;
@@ -632,13 +653,15 @@ dpll_pin_find(u64 clock_id, struct nlattr *mod_name_attr,
 			!nla_strcmp(mod_name_attr,
 				    module_name(pin->module)) : true;
 		type_match = type ? prop->type == type : true;
-		board_match = board_label && prop->board_label ?
-			!nla_strcmp(board_label, prop->board_label) : true;
-		panel_match = panel_label && prop->panel_label ?
-			!nla_strcmp(panel_label, prop->panel_label) : true;
-		package_match = package_label && prop->package_label ?
-			!nla_strcmp(package_label,
-				    prop->package_label) : true;
+		board_match = board_label ? (prop->board_label ?
+			!nla_strcmp(board_label, prop->board_label) : false) :
+			true;
+		panel_match = panel_label ? (prop->panel_label ?
+			!nla_strcmp(panel_label, prop->panel_label) : false) :
+			true;
+		package_match = package_label ? (prop->package_label ?
+			!nla_strcmp(package_label, prop->package_label) :
+			false) : true;
 		if (cid_match && mod_match && type_match && board_match &&
 		    panel_match && package_match) {
 			if (pin_match)
@@ -677,22 +700,22 @@ dpll_pin_find_from_nlattr(struct genl_info *info, struct sk_buff *skb)
 			if (type)
 				return -EINVAL;
 			type = nla_get_u8(attr);
-			break;
+		break;
 		case DPLL_A_PIN_BOARD_LABEL:
 			if (board_label_attr)
 				return -EINVAL;
 			board_label_attr = attr;
-			break;
+		break;
 		case DPLL_A_PIN_PANEL_LABEL:
 			if (panel_label_attr)
 				return -EINVAL;
 			panel_label_attr = attr;
-			break;
+		break;
 		case DPLL_A_PIN_PACKAGE_LABEL:
 			if (package_label_attr)
 				return -EINVAL;
 			package_label_attr = attr;
-			break;
+		break;
 		default:
 			break;
 		}
@@ -807,9 +830,9 @@ dpll_device_find(u64 clock_id, struct nlattr *mod_name_attr,
 
 	xa_for_each_marked(&dpll_device_xa, i, dpll, DPLL_REGISTERED) {
 		cid_match = clock_id ? dpll->clock_id == clock_id : true;
-		mod_match = mod_name_attr && module_name(dpll->module) ?
+		mod_match = mod_name_attr ? (module_name(dpll->module) ?
 			!nla_strcmp(mod_name_attr,
-				    module_name(dpll->module)) : true;
+				    module_name(dpll->module)) : false) : true;
 		type_match = type ? dpll->type == type : true;
 		if (cid_match && mod_match && type_match) {
 			if (dpll_match)

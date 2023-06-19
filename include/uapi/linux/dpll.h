@@ -10,19 +10,15 @@
 #define DPLL_FAMILY_VERSION	1
 
 /**
- * enum dpll_mode - working-modes a dpll can support, differentiate if and how
+ * enum dpll_mode - working modes a dpll can support, differentiates if and how
  *   dpll selects one of its inputs to syntonize with it, valid values for
  *   DPLL_A_MODE attribute
  * @DPLL_MODE_MANUAL: input can be only selected by sending a request to dpll
- * @DPLL_MODE_AUTOMATIC: highest prio, valid input, auto selected by dpll
- * @DPLL_MODE_HOLDOVER: dpll forced into holdover mode
- * @DPLL_MODE_FREERUN: dpll driven on system clk
+ * @DPLL_MODE_AUTOMATIC: highest prio input pin auto selected by dpll
  */
 enum dpll_mode {
 	DPLL_MODE_MANUAL = 1,
 	DPLL_MODE_AUTOMATIC,
-	DPLL_MODE_HOLDOVER,
-	DPLL_MODE_FREERUN,
 
 	__DPLL_MODE_MAX,
 	DPLL_MODE_MAX = (__DPLL_MODE_MAX - 1)
@@ -31,16 +27,15 @@ enum dpll_mode {
 /**
  * enum dpll_lock_status - provides information of dpll device lock status,
  *   valid values for DPLL_A_LOCK_STATUS attribute
- * @DPLL_LOCK_STATUS_UNLOCKED: dpll was not yet locked to any valid input (or
- *   is in mode: DPLL_MODE_FREERUN)
+ * @DPLL_LOCK_STATUS_UNLOCKED: dpll was not yet locked to any valid input
  * @DPLL_LOCK_STATUS_LOCKED: dpll is locked to a valid signal, but no holdover
  *   available
  * @DPLL_LOCK_STATUS_LOCKED_HO_ACQ: dpll is locked and holdover acquired
  * @DPLL_LOCK_STATUS_HOLDOVER: dpll is in holdover state - lost a valid lock or
- *   was forced by selecting DPLL_MODE_HOLDOVER mode (latter possible only when
- *   dpll lock-state was already DPLL_LOCK_STATUS_LOCKED, if dpll lock-state
- *   was not DPLL_LOCK_STATUS_LOCKED, the dpll's lock-state shall remain
- *   DPLL_LOCK_STATUS_UNLOCKED even if DPLL_MODE_HOLDOVER was requested)
+ *   was forced by disconnecting all the pins (latter possible only when dpll
+ *   lock-state was already DPLL_LOCK_STATUS_LOCKED_HO_ACQ, if dpll lock-state
+ *   was not DPLL_LOCK_STATUS_LOCKED_HO_ACQ, the dpll's lock-state shall remain
+ *   DPLL_LOCK_STATUS_UNLOCKED)
  */
 enum dpll_lock_status {
 	DPLL_LOCK_STATUS_UNLOCKED = 1,
@@ -126,6 +121,9 @@ enum dpll_pin_state {
 /**
  * enum dpll_pin_caps - defines possible capabilities of a pin, valid flags on
  *   DPLL_A_PIN_CAPS attribute
+ * @DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE: pin direction can be changed
+ * @DPLL_PIN_CAPS_PRIORITY_CAN_CHANGE: pin prority can be changed
+ * @DPLL_PIN_CAPS_STATE_CAN_CHANGE: pin state can be changed
  */
 enum dpll_pin_caps {
 	DPLL_PIN_CAPS_DIRECTION_CAN_CHANGE = 1,
@@ -155,7 +153,8 @@ enum dpll_a {
 	DPLL_A_PIN_PRIO,
 	DPLL_A_PIN_STATE,
 	DPLL_A_PIN_DPLL_CAPS,
-	DPLL_A_PIN_PARENT,
+	DPLL_A_PIN_PARENT_DEVICE,
+	DPLL_A_PIN_PARENT_PIN,
 
 	__DPLL_A_MAX,
 	DPLL_A_MAX = (__DPLL_A_MAX - 1)

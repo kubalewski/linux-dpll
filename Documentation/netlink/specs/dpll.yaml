@@ -9,7 +9,7 @@ definitions:
     type: enum
     name: mode
     doc: |
-      working-modes a dpll can support, differentiate if and how dpll selects
+      working modes a dpll can support, differentiates if and how dpll selects
       one of its inputs to syntonize with it, valid values for DPLL_A_MODE
       attribute
     entries:
@@ -19,13 +19,7 @@ definitions:
         value: 1
       -
         name: automatic
-        doc: highest prio, valid input, auto selected by dpll
-      -
-        name: holdover
-        doc: dpll forced into holdover mode
-      -
-        name: freerun
-        doc: dpll driven on system clk
+        doc: highest prio input pin auto selected by dpll
     render-max: true
   -
     type: enum
@@ -37,8 +31,7 @@ definitions:
       -
         name: unlocked
         doc: |
-          dpll was not yet locked to any valid input (or is in mode:
-            DPLL_MODE_FREERUN)
+          dpll was not yet locked to any valid input
         value: 1
       -
         name: locked
@@ -52,11 +45,10 @@ definitions:
         name: holdover
         doc: |
           dpll is in holdover state - lost a valid lock or was forced
-          by selecting DPLL_MODE_HOLDOVER mode (latter possible only
-          when dpll lock-state was already DPLL_LOCK_STATUS_LOCKED,
-          if dpll lock-state was not DPLL_LOCK_STATUS_LOCKED, the
-          dpll's lock-state shall remain DPLL_LOCK_STATUS_UNLOCKED
-          even if DPLL_MODE_HOLDOVER was requested)
+          by disconnecting all the pins (latter possible only
+          when dpll lock-state was already DPLL_LOCK_STATUS_LOCKED_HO_ACQ,
+          if dpll lock-state was not DPLL_LOCK_STATUS_LOCKED_HO_ACQ, the
+          dpll's lock-state shall remain DPLL_LOCK_STATUS_UNLOCKED)
     render-max: true
   -
     type: const
@@ -164,10 +156,13 @@ definitions:
     entries:
       -
         name: direction-can-change
+        doc: pin direction can be changed
       -
         name: priority-can-change
+        doc: pin prority can be changed
       -
         name: state-can-change
+        doc: pin state can be changed
 
 attribute-sets:
   -
@@ -249,12 +244,17 @@ attribute-sets:
         name: pin-dpll-caps
         type: u32
       -
-        name: pin-parent
+        name: pin-parent-device
         type: nest
         multi-attr: true
-        nested-attributes: pin-parent
+        nested-attributes: pin-parent-device
+      -
+        name: pin-parent-pin
+        type: nest
+        multi-attr: true
+        nested-attributes: pin-parent-pin
   -
-    name: pin-parent
+    name: pin-parent-device
     subset-of: dpll
     attributes:
       -
@@ -269,10 +269,16 @@ attribute-sets:
       -
         name: pin-state
         type: u8
+  -
+    name: pin-parent-pin
+    subset-of: dpll
+    attributes:
+      -
+        name: pin-state
+        type: u8
       -
         name: pin-id
         type: u32
-
   -
     name: pin-frequency-range
     subset-of: dpll
@@ -385,7 +391,7 @@ operations:
             - pin-type
         reply:
           attributes:
-            - id
+            - pin-id
 
     -
       name: pin-get
@@ -404,7 +410,6 @@ operations:
         post: dpll-pin-post-doit
         request:
           attributes:
-            - id
             - pin-id
         reply: &pin-attrs
           attributes:
@@ -415,8 +420,9 @@ operations:
             - pin-type
             - pin-frequency
             - pin-frequency-supported
-            - pin-parent
             - pin-dpll-caps
+            - pin-parent-device
+            - pin-parent-pin
 
       dump:
         pre: dpll-lock-dumpit
@@ -437,13 +443,13 @@ operations:
         post: dpll-pin-post-doit
         request:
           attributes:
-            - id
             - pin-id
             - pin-frequency
             - pin-direction
             - pin-prio
             - pin-state
-            - pin-parent
+            - pin-parent-device
+            - pin-parent-pin
     -
       name: pin-create-ntf
       doc: Notification about pin appearing

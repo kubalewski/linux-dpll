@@ -11,11 +11,7 @@
 #define ICE_DPLL_PIN_IDX_INVALID		0xff
 #define ICE_DPLL_RCLK_NUM_PER_PF		1
 
-/**
- * dpll_lock_status - map ice cgu states into dpll's subsystem lock status
- */
-static const enum dpll_lock_status
-ice_dpll_status[__DPLL_LOCK_STATUS_MAX] = {
+static const enum dpll_lock_status ice_dpll_status[] = {
 	[ICE_CGU_STATE_FREERUN] = DPLL_LOCK_STATUS_UNLOCKED,
 	[ICE_CGU_STATE_LOCKED] = DPLL_LOCK_STATUS_LOCKED,
 	[ICE_CGU_STATE_LOCKED_HO_ACQ] = DPLL_LOCK_STATUS_LOCKED_HO_ACQ,
@@ -23,7 +19,11 @@ ice_dpll_status[__DPLL_LOCK_STATUS_MAX] = {
 };
 
 /**
- * ice_dpll_pin_type - enumerate ice pin types
+ * enum ice_dpll_pin_type - enumerate ice pin types:
+ * @ICE_DPLL_PIN_INVALID: invalid pin type
+ * @ICE_DPLL_PIN_TYPE_INPUT: input pin
+ * @ICE_DPLL_PIN_TYPE_OUTPUT: output pin
+ * @ICE_DPLL_PIN_TYPE_RCLK_INPUT: recovery clock input pin
  */
 enum ice_dpll_pin_type {
 	ICE_DPLL_PIN_INVALID,
@@ -32,9 +32,6 @@ enum ice_dpll_pin_type {
 	ICE_DPLL_PIN_TYPE_RCLK_INPUT,
 };
 
-/**
- * pin_type_name - string names of ice pin types
- */
 static const char * const pin_type_name[] = {
 	[ICE_DPLL_PIN_TYPE_INPUT] = "input",
 	[ICE_DPLL_PIN_TYPE_OUTPUT] = "output",
@@ -44,6 +41,7 @@ static const char * const pin_type_name[] = {
 /**
  * ice_dpll_cb_lock - lock dplls mutex in callback context
  * @pf: private board structure
+ * @extack: error reporting
  *
  * Lock the mutex from the callback operations invoked by dpll subsystem.
  * Prevent dead lock caused by `rmmod ice` when dpll callbacks are under stress
@@ -91,6 +89,7 @@ static void ice_dpll_cb_unlock(struct ice_pf *pf)
  * @pin: pointer to a pin
  * @pin_type: type of pin being configured
  * @freq: frequency to be set
+ * @extack: error reporting
  *
  * Set requested frequency on a pin.
  *
@@ -314,6 +313,7 @@ ice_dpll_output_frequency_get(const struct dpll_pin *pin, void *pin_priv,
  * @hw: board private hw structure
  * @pin: pointer to a pin
  * @pin_type: type of pin being enabled
+ * @extack: error reporting
  *
  * Enable a pin on both dplls. Store current state in pin->flags.
  *
@@ -360,6 +360,7 @@ ice_dpll_pin_enable(struct ice_hw *hw, struct ice_dpll_pin *pin,
  * @hw: board private hw structure
  * @pin: pointer to a pin
  * @pin_type: type of pin being disabled
+ * @extack: error reporting
  *
  * Disable a pin on both dplls. Store current state in pin->flags.
  *
@@ -401,9 +402,10 @@ ice_dpll_pin_disable(struct ice_hw *hw, struct ice_dpll_pin *pin,
 
 /**
  * ice_dpll_pin_state_update - update pin's state
- * @hw: private board struct
+ * @pf: private board struct
  * @pin: structure with pin attributes to be updated
  * @pin_type: type of pin being updated
+ * @extack: error reporting
  *
  * Determine pin current state and frequency, then update struct
  * holding the pin info. For input pin states are separated for each
@@ -508,6 +510,7 @@ err:
  * @dpll: ice dpll pointer
  * @pin: ice pin pointer
  * @prio: priority value being set on a dpll
+ * @extack: error reporting
  *
  * Internal wrapper for setting the priority in the hardware.
  *
@@ -540,7 +543,9 @@ ice_dpll_hw_input_prio_set(struct ice_pf *pf, struct ice_dpll *dpll,
 /**
  * ice_dpll_lock_status_get - get dpll lock status callback
  * @dpll: registered dpll pointer
+ * @dpll_priv: private data pointer passed on dpll registration
  * @status: on success holds dpll's lock status
+ * @extack: error reporting
  *
  * Dpll subsystem callback, provides dpll's lock status.
  *
@@ -570,7 +575,7 @@ ice_dpll_lock_status_get(const struct dpll_device *dpll, void *dpll_priv,
 /**
  * ice_dpll_mode_get - get dpll's working mode
  * @dpll: registered dpll pointer
- * @priv: private data pointer passed on dpll registration
+ * @dpll_priv: private data pointer passed on dpll registration
  * @mode: on success holds current working mode of dpll
  * @extack: error reporting
  *
@@ -580,7 +585,7 @@ ice_dpll_lock_status_get(const struct dpll_device *dpll, void *dpll_priv,
  * * 0 - success
  * * negative - failure
  */
-static int ice_dpll_mode_get(const struct dpll_device *dpll, void *priv,
+static int ice_dpll_mode_get(const struct dpll_device *dpll, void *dpll_priv,
 			     enum dpll_mode *mode,
 			     struct netlink_ext_ack *extack)
 {
@@ -590,9 +595,9 @@ static int ice_dpll_mode_get(const struct dpll_device *dpll, void *priv,
 }
 
 /**
- * ice_dpll_mode_get - check if dpll's working mode is supported
+ * ice_dpll_mode_supported - check if dpll's working mode is supported
  * @dpll: registered dpll pointer
- * @priv: private data pointer passed on dpll registration
+ * @dpll_priv: private data pointer passed on dpll registration
  * @mode: mode to be checked for support
  * @extack: error reporting
  *
@@ -603,7 +608,8 @@ static int ice_dpll_mode_get(const struct dpll_device *dpll, void *priv,
  * * true - mode is supported
  * * false - mode is not supported
  */
-static bool ice_dpll_mode_supported(const struct dpll_device *dpll, void *priv,
+static bool ice_dpll_mode_supported(const struct dpll_device *dpll,
+				    void *dpll_priv,
 				    enum dpll_mode mode,
 				    struct netlink_ext_ack *extack)
 {
@@ -619,7 +625,7 @@ static bool ice_dpll_mode_supported(const struct dpll_device *dpll, void *priv,
  * @pin_priv: private data pointer passed on pin registration
  * @dpll: registered dpll pointer
  * @dpll_priv: private data pointer passed on dpll registration
- * @state: state of pin to be set
+ * @enable: if pin shalll be enabled
  * @extack: error reporting
  * @pin_type: type of a pin
  *
@@ -937,10 +943,10 @@ ice_dpll_output_direction(const struct dpll_pin *pin, void *pin_priv,
 
 /**
  * ice_dpll_rclk_state_on_pin_set - set a state on rclk pin
- * @dpll: registered dpll pointer
  * @pin: pointer to a pin
  * @pin_priv: private data pointer passed on pin registration
  * @parent_pin: pin parent pointer
+ * @parent_pin_priv: parent private data pointer passed on pin registration
  * @state: state to be set on pin
  * @extack: error reporting
  *
@@ -998,6 +1004,7 @@ unlock:
  * @pin: pointer to a pin
  * @pin_priv: private data pointer passed on pin registration
  * @parent_pin: pin parent pointer
+ * @parent_pin_priv: pin parent priv data pointer passed on pin registration
  * @state: on success holds pin state on parent pin
  * @extack: error reporting
  *
@@ -1109,6 +1116,7 @@ static void ice_dpll_notify_changes(struct ice_dpll *d)
  * ice_dpll_update_state - update dpll state
  * @pf: pf private structure
  * @d: pointer to queried dpll device
+ * @init: if function called on initialization of ice dpll
  *
  * Poll current state of dpll from hw and update ice_dpll struct.
  *
@@ -1211,7 +1219,6 @@ resched:
 
 /**
  * ice_dpll_release_pins - release pins resources from dpll subsystem
- * @pf: board private structure
  * @pins: pointer to pins array
  * @count: number of pins
  *
@@ -1294,7 +1301,6 @@ ice_dpll_unregister_pins(struct dpll_device *dpll, struct ice_dpll_pin *pins,
  * @pins: pointer to pins array
  * @ops: callback ops registered with the pins
  * @count: number of pins
- * @cgu: if cgu is present and controlled by this NIC
  *
  * Register pins of a given array with given dpll in dpll subsystem.
  *
@@ -1351,7 +1357,7 @@ ice_dpll_deinit_direct_pins(bool cgu, struct ice_dpll_pin *pins, int count,
 
 /**
  * ice_dpll_init_direct_pins - initialize direct pins
- * @dpll: dpll pointer to register pins with
+ * @pf: board private structure
  * @cgu: if cgu is present and controlled by this NIC
  * @pins: pointer to pins array
  * @start_idx: on which index shall allocation start in dpll subsystem
@@ -1427,11 +1433,9 @@ static void ice_dpll_deinit_rclk_pin(struct ice_pf *pf)
 
 /**
  * ice_dpll_init_rclk_pins - initialize recovered clock pin
- * @dpll: dpll pointer to register pins with
- * @cgu: if cgu is present and controlled by this NIC
- * @pins: pointer to pins array
+ * @pf: board private structure
+ * @pin: pin to register
  * @start_idx: on which index shall allocation start in dpll subsystem
- * @count: number of pins
  * @ops: callback ops registered with the pins
  *
  * Allocate resource for recovered clock pin in dpll subsystem. Register the
@@ -1575,6 +1579,8 @@ deinit_inputs:
 /**
  * ice_dpll_deinit_dpll - deinitialize dpll device
  * @pf: board private structure
+ * @d: pointer to ice_dpll
+ * @cgu: if cgu is present and controlled by this NIC
  *
  * If cgu is owned unregister the dpll from dpll subsystem.
  * Release resources of dpll device from dpll subsystem.
@@ -1747,7 +1753,6 @@ ice_dpll_init_info_direct_pins(struct ice_pf *pf,
 /**
  * ice_dpll_init_info_rclk_pin - initializes rclk pin information
  * @pf: board private structure
- * @pin_type: type of pins being initialized
  *
  * Init information for rclk pin, cache them in pf->dplls.rclk.
  *
